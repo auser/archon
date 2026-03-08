@@ -58,6 +58,34 @@ pub fn resolve_arch_root(explicit: Option<&str>) -> Result<Option<PathBuf>> {
     Ok(None)
 }
 
+/// Append `entry` to `<project_dir>/.gitignore` if it is not already present.
+pub fn ensure_gitignore_entry(project_dir: &Path, entry: &str) -> Result<()> {
+    let gitignore = project_dir.join(".gitignore");
+    let needle = entry.trim_end_matches('/');
+
+    if gitignore.exists() {
+        let content = std::fs::read_to_string(&gitignore)
+            .with_context(|| format!("reading {}", gitignore.display()))?;
+        let already = content
+            .lines()
+            .any(|l| l.trim() == needle || l.trim() == entry);
+        if already {
+            return Ok(());
+        }
+        let mut updated = content;
+        if !updated.ends_with('\n') {
+            updated.push('\n');
+        }
+        updated.push_str(entry);
+        updated.push('\n');
+        std::fs::write(&gitignore, updated)?;
+    } else {
+        std::fs::write(&gitignore, format!("{entry}\n"))?;
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
