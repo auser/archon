@@ -1,16 +1,16 @@
 [workspace]
 resolver = "2"
 members = [
-    "crates/arch-tool-cli",
-    "crates/arch-tool-core",
-    "crates/arch-tool-policy",
-    "crates/arch-tool-verify",
-    "crates/arch-tool-sync",
-    "crates/arch-tool-adr",
-    "crates/arch-tool-graph",
-    "crates/arch-tool-templates",
-    "crates/arch-tool-server",
-    "crates/arch-tool-ai",
+    "crates/archon-cli",
+    "crates/archon-core",
+    "crates/archon-policy",
+    "crates/archon-verify",
+    "crates/archon-sync",
+    "crates/archon-adr",
+    "crates/archon-graph",
+    "crates/archon-templates",
+    "crates/archon-server",
+    "crates/archon-ai",
 ]
 
 [workspace.package]
@@ -36,13 +36,13 @@ tower-http = { version = "0.6", features = ["cors", "trace"] }
 tracing = "0.1"
 tracing-subscriber = "0.3"
 
-arch-tool-core = { path = "crates/arch-tool-core" }
-arch-tool-policy = { path = "crates/arch-tool-policy" }
-arch-tool-verify = { path = "crates/arch-tool-verify" }
-arch-tool-sync = { path = "crates/arch-tool-sync" }
-arch-tool-adr = { path = "crates/arch-tool-adr" }
-arch-tool-graph = { path = "crates/arch-tool-graph" }
-arch-tool-templates = { path = "crates/arch-tool-templates" }
-arch-tool-server = { path = "crates/arch-tool-server" }
-arch-tool-ai = { path = "crates/arch-tool-ai" }
+archon-core = { path = "crates/archon-core" }
+archon-policy = { path = "crates/archon-policy" }
+archon-verify = { path = "crates/archon-verify" }
+archon-sync = { path = "crates/archon-sync" }
+archon-adr = { path = "crates/archon-adr" }
+archon-graph = { path = "crates/archon-graph" }
+archon-templates = { path = "crates/archon-templates" }
+archon-server = { path = "crates/archon-server" }
+archon-ai = { path = "crates/archon-ai" }
 reqwest = { version = "0.12", features = ["json", "blocking"] }

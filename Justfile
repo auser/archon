@@ -1,4 +1,4 @@
-# arch-tool — architecture governance tool
+# archon — architecture governance tool
 
 # Default: list available recipes
 default:
@@ -31,47 +31,47 @@ ci: fmt-check clippy test
 build:
     cargo build --workspace
 
-# Build arch-tool CLI in release mode
+# Build archon CLI in release mode
 build-release:
-    cargo build --release -p arch-tool-cli
+    cargo build --release -p archon-cli
 
-# Build CLI and symlink to ~/.local/bin/arch-tool
+# Build CLI and symlink to ~/.local/bin/archon
 build-cli: build-release
     mkdir -p ~/.local/bin
-    ln -sf "$(pwd)/target/release/arch-tool" ~/.local/bin/arch-tool
+    ln -sf "$(pwd)/target/release/archon" ~/.local/bin/archon
     @echo ""
-    @echo "✓ Symlinked: ~/.local/bin/arch-tool → $(pwd)/target/release/arch-tool"
+    @echo "✓ Symlinked: ~/.local/bin/archon → $(pwd)/target/release/archon"
     @echo "  Ensure ~/.local/bin is in your PATH"
 
-# Install arch-tool into ~/.local/bin (symlink for local dev)
+# Install archon into ~/.local/bin (symlink for local dev)
 install: build-release
     mkdir -p ~/.local/bin
-    ln -sf "$(pwd)/target/release/arch-tool" ~/.local/bin/arch-tool
+    ln -sf "$(pwd)/target/release/archon" ~/.local/bin/archon
     @echo ""
-    @echo "✓ Symlinked: ~/.local/bin/arch-tool → $(pwd)/target/release/arch-tool"
+    @echo "✓ Symlinked: ~/.local/bin/archon → $(pwd)/target/release/archon"
     @echo ""
     @echo "Run from any directory:"
-    @echo "  arch-tool init --profile rust-workspace"
-    @echo "  arch-tool verify"
-    @echo "  arch-tool status"
+    @echo "  archon init --profile rust-workspace"
+    @echo "  archon verify"
+    @echo "  archon status"
 
 # ─── Run ──────────────────────────────────────────────────────────────────────
 
-# Run arch-tool with arguments: just run init --profile cli-tool
+# Run archon with arguments: just run init --profile cli-tool
 run *args:
-    cargo run -p arch-tool-cli -- {{args}}
+    cargo run -p archon-cli -- {{args}}
 
 # Initialize a repo (shortcut): just init --profile runtime-system
 init *flags:
-    cargo run -p arch-tool-cli -- init {{flags}}
+    cargo run -p archon-cli -- init {{flags}}
 
 # Verify conformance (shortcut)
 verify *flags:
-    cargo run -p arch-tool-cli -- verify {{flags}}
+    cargo run -p archon-cli -- verify {{flags}}
 
 # Show status (shortcut)
 status *flags:
-    cargo run -p arch-tool-cli -- status {{flags}}
+    cargo run -p archon-cli -- status {{flags}}
 
 # ─── Release ──────────────────────────────────────────────────────────────────
 

@@ -1,0 +1,18 @@
+[package]
+name = "archon-verify"
+description = "Conformance checking engine for archon"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+archon-core.workspace = true
+archon-policy.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+colored.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

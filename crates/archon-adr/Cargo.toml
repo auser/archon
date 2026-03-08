@@ -1,0 +1,16 @@
+[package]
+name = "archon-adr"
+description = "ADR and exception management for archon"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+archon-core.workspace = true
+serde.workspace = true
+serde_yaml.workspace = true
+anyhow.workspace = true
+chrono.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

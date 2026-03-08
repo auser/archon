@@ -1,15 +1,15 @@
-# arch-tool
+# archon
 
 Architecture governance tool for the Hologram ecosystem.
 
-arch-tool is the **enforcement engine** that keeps multiple repositories aligned with shared architecture decisions. It reads decisions from the architecture repository (`hologram-architecture`), encodes them as machine-readable policies, and pushes them into downstream repos via file sync, conformance checking, and AI-guided documentation.
+archon is the **enforcement engine** that keeps multiple repositories aligned with shared architecture decisions. It reads decisions from the architecture repository (`hologram-architecture`), encodes them as machine-readable policies, and pushes them into downstream repos via file sync, conformance checking, and AI-guided documentation.
 
 **Two repositories, distinct roles:**
 
-| Repository | Role |
-|---|---|
+| Repository              | Role                                                                                                      |
+| ----------------------- | --------------------------------------------------------------------------------------------------------- |
 | `hologram-architecture` | **Source of truth** — architecture decisions (ADRs), policies, standards, templates, contract definitions |
-| `arch-tool` (this repo) | **Enforcement tool** — reads those decisions and applies them across the ecosystem |
+| `archon` (this repo) | **Enforcement tool** — reads those decisions and applies them across the ecosystem                        |
 
 Architecture decisions are made in `hologram-architecture`. This repo builds the tool that enforces them.
 
@@ -19,19 +19,19 @@ Architecture decisions are made in `hologram-architecture`. This repo builds the
 
 The Hologram ecosystem is built across multiple repositories:
 
-| Repository | Role | What it does |
-|---|---|---|
-| `hologram` | core | Execution runtime, graph representation, memory contracts |
-| `hologram-ai` | core | AI compiler, model import, `.holo` archive generation |
-| `hologram-sandbox` | extension | Process/WASM/microVM isolation runtimes |
-| `hologram-sdk` | library | Developer SDK |
-| `hologram-website` | service | Documentation site |
-| `hologram-architecture` | authority | Architecture decisions, policies, standards |
-| **`arch-tool`** | **tool** | **This repo. Enforcement CLI + server.** |
+| Repository              | Role      | What it does                                              |
+| ----------------------- | --------- | --------------------------------------------------------- |
+| `hologram`              | core      | Execution runtime, graph representation, memory contracts |
+| `hologram-ai`           | core      | AI compiler, model import, `.holo` archive generation     |
+| `hologram-sandbox`      | extension | Process/WASM/microVM isolation runtimes                   |
+| `hologram-sdk`          | library   | Developer SDK                                             |
+| `hologram-website`      | service   | Documentation site                                        |
+| `hologram-architecture` | authority | Architecture decisions, policies, standards               |
+| **`archon`**         | **tool**  | **This repo. Enforcement CLI + server.**                  |
 
 These repos are mostly built by AI agents (Claude, Codex, etc.). Each agent works in its own repo, making local decisions. Without enforcement, the repos drift apart — incompatible interfaces, missing documentation, broken contracts, inconsistent conventions.
 
-arch-tool bridges the gap between high-level architecture decisions and implementation-level code:
+archon bridges the gap between high-level architecture decisions and implementation-level code:
 
 - **Reads** architecture decisions from `hologram-architecture` (ADRs, policies, templates)
 - **Generates** the right documentation and metadata when bootstrapping a new repo
@@ -48,7 +48,7 @@ This is the core question: architecture decisions live in `hologram-architecture
 ### The sync pipeline
 
 ```
-hologram-architecture/          arch-tool (this tool)           downstream repos
+hologram-architecture/          archon (this tool)           downstream repos
 ┌──────────────────────┐        ┌──────────────────┐          ┌──────────────────┐
 │ specs/adrs/           │        │                  │          │                  │
 │   0001-boundaries.md  │───────▶│  reads ADRs &    │          │                  │
@@ -69,23 +69,23 @@ hologram-architecture/          arch-tool (this tool)           downstream repos
 
 1. **Decision is made** in `hologram-architecture`: a new ADR is written (e.g., "all repos must declare crate classes"), and the rule is encoded in `policies/architectural.yaml`
 
-2. **arch-tool reads it**: when you run `arch-tool sync` or `arch-tool verify`, arch-tool locates the architecture repo (via `--arch-root`, `ARCH_TOOL_ROOT` env var, or sibling directory auto-discovery) and loads the current policies and templates
+2. **archon reads it**: when you run `archon sync` or `archon verify`, archon locates the architecture repo (via `--arch-root`, `ARCHON_ROOT` env var, or sibling directory auto-discovery) and loads the current policies and templates
 
-3. **Sync pushes to downstream repos**: `arch-tool sync` reads the downstream repo's `sync-manifest.yaml` and updates managed files:
+3. **Sync pushes to downstream repos**: `archon sync` reads the downstream repo's `sync-manifest.yaml` and updates managed files:
    - **Fully-managed files** are overwritten from the architecture repo's templates
-   - **Section-managed files** (like AGENTS.md) have their `<!-- ARCH-TOOL:MANAGED:BEGIN/END -->` sections replaced while preserving project-specific content outside those markers
+   - **Section-managed files** (like AGENTS.md) have their `<!-- ARCHON:MANAGED:BEGIN/END -->` sections replaced while preserving project-specific content outside those markers
    - **Unmanaged files** are left untouched
 
 4. **AI agents read the synced files**: when an AI agent starts working in hologram-sandbox, it reads the updated AGENTS.md and CLAUDE.md — which now contain the latest ecosystem rules synced from the architecture repo
 
-5. **Verify enforces in CI**: `arch-tool verify` runs as a CI check on every PR, catching conformance issues before they merge
+5. **Verify enforces in CI**: `archon verify` runs as a CI check on every PR, catching conformance issues before they merge
 
 ### What this means in practice
 
-- **You never manually copy rules between repos.** `arch-tool sync` does it.
-- **AI agents don't need to read the architecture repo.** They read AGENTS.md in their own repo, which arch-tool keeps current.
-- **New rules automatically propagate.** Add a rule to `hologram-architecture/policies/`, run `arch-tool sync` across repos (or have CI do it), and every agent sees the new guidance.
-- **Drift is visible.** `arch-tool verify` and `arch-tool status` show exactly where each repo stands relative to current standards.
+- **You never manually copy rules between repos.** `archon sync` does it.
+- **AI agents don't need to read the architecture repo.** They read AGENTS.md in their own repo, which archon keeps current.
+- **New rules automatically propagate.** Add a rule to `hologram-architecture/policies/`, run `archon sync` across repos (or have CI do it), and every agent sees the new guidance.
+- **Drift is visible.** `archon verify` and `archon status` show exactly where each repo stands relative to current standards.
 
 ### How architecture decisions are made
 
@@ -95,14 +95,14 @@ This happens in `hologram-architecture`, not here. The workflow:
 2. **Research**: AI or human produces analysis — stored in `hologram-architecture/specs/plans/`
 3. **Decision**: Record it as an ADR in `hologram-architecture/specs/adrs/`
 4. **Encode**: Translate the decision into a machine-readable rule in `hologram-architecture/policies/`
-5. **Sync**: Run `arch-tool sync` in downstream repos to push the new guidance
-6. **Enforce**: `arch-tool verify` checks it automatically from this point forward
+5. **Sync**: Run `archon sync` in downstream repos to push the new guidance
+6. **Enforce**: `archon verify` checks it automatically from this point forward
 
 Example flow:
 - You decide "all repos must have an AGENTS.md file" → write ADR in hologram-architecture
 - Encode as policy rule `STR-002` in `hologram-architecture/policies/structural.yaml`
-- `arch-tool sync` updates the managed section of AGENTS.md in every downstream repo to include the new rule context
-- `arch-tool verify` checks for AGENTS.md existence in every repo
+- `archon sync` updates the managed section of AGENTS.md in every downstream repo to include the new rule context
+- `archon verify` checks for AGENTS.md existence in every repo
 - AI agents reading AGENTS.md see the ecosystem-wide guidance
 
 ---
@@ -147,10 +147,10 @@ exceptions:                     # approved deviations from policy rules
 
 ```bash
 cd ~/work/uor/hologram/hologram-sandbox
-arch-tool init
+archon init
 ```
 
-arch-tool does the following:
+archon does the following:
 1. Reads the repo's `Cargo.toml` to understand what kind of project it is
 2. If AI is available (ANTHROPIC_API_KEY or `claude` CLI), asks AI to determine the appropriate role, contracts, and relevant documentation
 3. If no AI, uses the `--profile` flag to select a predefined configuration
@@ -164,20 +164,20 @@ Edit it directly. It's YAML — humans and AI agents both read and write it.
 
 When the ecosystem adds a new contract, you add it to `contracts.implements` or `contracts.depends_on`. When you add a new crate to the workspace, add it to `crate_classes`. When you need to break a rule temporarily, add an exception with an expiry date.
 
-`arch-tool verify` will tell you if your declarations are inconsistent (e.g., you claim to implement a contract but the required files don't exist).
+`archon verify` will tell you if your declarations are inconsistent (e.g., you claim to implement a contract but the required files don't exist).
 
 #### What it enables
 
-- **`arch-tool verify`**: checks that the repo actually conforms to what it declares
-- **`arch-tool graph`**: builds the ecosystem's contract map — who provides what, who depends on what
-- **`arch-tool status`**: shows where the repo stands relative to current standards
+- **`archon verify`**: checks that the repo actually conforms to what it declares
+- **`archon graph`**: builds the ecosystem's contract map — who provides what, who depends on what
+- **`archon status`**: shows where the repo stands relative to current standards
 - **AI agents**: read this file to understand the repo's role and responsibilities
 
 ---
 
 ### Policy Files — The Rules
 
-Stored in this repo at `policies/*.yaml`. These are the machine-readable rules that `arch-tool verify` enforces:
+Stored in this repo at `policies/*.yaml`. These are the machine-readable rules that `archon verify` enforces:
 
 ```yaml
 # policies/structural.yaml
@@ -275,10 +275,10 @@ rules:
 1. Make an architecture decision (ADR) about what should be required
 2. Add the rule to the appropriate policy file
 3. Bump the standards version if it's a breaking change
-4. Run `arch-tool verify` across the ecosystem to see the impact
+4. Run `archon verify` across the ecosystem to see the impact
 5. Downstream repos either comply or file an exception
 
-arch-tool ships with built-in defaults for these rules, so it works even without the policy files present. The policy files override and extend the defaults.
+archon ships with built-in defaults for these rules, so it works even without the policy files present. The policy files override and extend the defaults.
 
 #### Rule categories
 
@@ -288,7 +288,7 @@ arch-tool ships with built-in defaults for these rules, so it works even without
 
 #### Severity levels
 
-- **error**: Must pass. `arch-tool verify` exits 1 if any error-level rule fails. Use in CI to block merges.
+- **error**: Must pass. `archon verify` exits 1 if any error-level rule fails. Use in CI to block merges.
 - **warning**: Should pass. Reported but doesn't fail the build. Use `--strict` to promote warnings to errors.
 - **info**: Advisory. Information for awareness, never fails.
 
@@ -296,7 +296,7 @@ arch-tool ships with built-in defaults for these rules, so it works even without
 
 ### `sync-manifest.yaml` — File Ownership Model
 
-When architecture evolves, downstream repos need to be updated. This file controls which files arch-tool manages:
+When architecture evolves, downstream repos need to be updated. This file controls which files archon manages:
 
 ```yaml
 version: "2026.03"
@@ -323,9 +323,9 @@ files:
 
 #### The three ownership levels
 
-**fully-managed**: arch-tool owns the entire file. On `arch-tool sync`, the file is overwritten from the source template in this repo. Use for: shared architecture summaries, upstream standards docs, generated configs.
+**fully-managed**: archon owns the entire file. On `archon sync`, the file is overwritten from the source template in this repo. Use for: shared architecture summaries, upstream standards docs, generated configs.
 
-**section-managed**: arch-tool owns the content between `<!-- ARCH-TOOL:MANAGED:BEGIN -->` and `<!-- ARCH-TOOL:MANAGED:END -->` markers. Everything outside those markers is handwritten and preserved. On `arch-tool sync`, only the managed sections are replaced. Use for: AGENTS.md (shared ecosystem rules + project-specific rules), CLAUDE.md (shared context + project-specific context).
+**section-managed**: archon owns the content between `<!-- ARCHON:MANAGED:BEGIN -->` and `<!-- ARCHON:MANAGED:END -->` markers. Everything outside those markers is handwritten and preserved. On `archon sync`, only the managed sections are replaced. Use for: AGENTS.md (shared ecosystem rules + project-specific rules), CLAUDE.md (shared context + project-specific context).
 
 Example of a section-managed file:
 ```markdown
@@ -336,43 +336,43 @@ This document provides guidance for agents in **hologram-sandbox**.
 ## Project-Specific Rules
 (this part is written by the project team and never overwritten)
 
-<!-- ARCH-TOOL:MANAGED:BEGIN -->
+<!-- ARCHON:MANAGED:BEGIN -->
 ## Ecosystem Rules
-(this part is managed by arch-tool and updated on sync)
+(this part is managed by archon and updated on sync)
 - Use the hologram- prefix for all crate names
-- Follow ADR decisions from arch-tool
+- Follow ADR decisions from archon
 - Run cargo clippy -- -D warnings before committing
-<!-- ARCH-TOOL:MANAGED:END -->
+<!-- ARCHON:MANAGED:END -->
 ```
 
-**unmanaged**: arch-tool never modifies this file. It's entirely project-owned. Use for: project-specific architecture docs, READMEs, implementation details.
+**unmanaged**: archon never modifies this file. It's entirely project-owned. Use for: project-specific architecture docs, READMEs, implementation details.
 
 ---
 
 ## Commands
 
-### `arch-tool init` — Bootstrap a Repository
+### `archon init` — Bootstrap a Repository
 
 Creates `hologram.repo.yaml` and base documentation in a downstream repo.
 
 ```bash
 cd ~/work/uor/hologram/hologram-new-project
-arch-tool init                              # AI selects relevant docs
-arch-tool init --profile runtime-system     # use a predefined profile
-arch-tool init --standards-version 2026.03  # set specific version
-arch-tool init --dry-run                    # preview without writing
-arch-tool init --force                      # overwrite existing files
+archon init                              # AI selects relevant docs
+archon init --profile runtime-system     # use a predefined profile
+archon init --standards-version 2026.03  # set specific version
+archon init --dry-run                    # preview without writing
+archon init --force                      # overwrite existing files
 ```
 
 **What it creates:**
-| File | Purpose |
-|---|---|
-| `hologram.repo.yaml` | Repo identity — role, contracts, standards version |
-| `AGENTS.md` | Guidance for AI agents working in this repo |
-| `CLAUDE.md` | Context for Claude Code sessions |
-| `specs/docs/architecture.md` | Project-specific architecture documentation |
-| `specs/docs/development.md` | Development guide |
-| *(AI-selected optional docs)* | runtime.md, security.md, api.md, etc. |
+| File                          | Purpose                                            |
+| ----------------------------- | -------------------------------------------------- |
+| `hologram.repo.yaml`          | Repo identity — role, contracts, standards version |
+| `AGENTS.md`                   | Guidance for AI agents working in this repo        |
+| `CLAUDE.md`                   | Context for Claude Code sessions                   |
+| `specs/docs/architecture.md`  | Project-specific architecture documentation        |
+| `specs/docs/development.md`   | Development guide                                  |
+| *(AI-selected optional docs)* | runtime.md, security.md, api.md, etc.              |
 
 **AI behavior during init:**
 1. Reads the repo's Cargo.toml and existing files
@@ -383,15 +383,15 @@ arch-tool init --force                      # overwrite existing files
 
 If no AI backend is available, falls back to template-based generation with TODO placeholders.
 
-### `arch-tool verify` — Check Conformance
+### `archon verify` — Check Conformance
 
 Runs all policy rules against a repository and reports results.
 
 ```bash
-arch-tool verify                                    # colored terminal report
-arch-tool verify --format json                      # machine-readable for CI
-arch-tool verify --strict                           # warnings become errors
-arch-tool verify --arch-root ~/work/uor/hologram/holoarch  # explicit path to this repo
+archon verify                                    # colored terminal report
+archon verify --format json                      # machine-readable for CI
+archon verify --strict                           # warnings become errors
+archon verify --arch-root ~/work/uor/hologram/holoarch  # explicit path to this repo
 ```
 
 **How it works:**
@@ -407,7 +407,7 @@ arch-tool verify --arch-root ~/work/uor/hologram/holoarch  # explicit path to th
 
 **Example output:**
 ```
-arch-tool verify: hologram-sandbox
+archon verify: hologram-sandbox
   standards version: 2026.03
 
   ✓ [STR-001] structural: hologram.repo.yaml exists
@@ -424,26 +424,26 @@ arch-tool verify: hologram-sandbox
 ```yaml
 # .github/workflows/verify.yml
 - name: Architecture conformance
-  run: arch-tool verify --strict --format json
+  run: archon verify --strict --format json
 ```
 
-### `arch-tool status` — Read-Only Summary
+### `archon status` — Read-Only Summary
 
 Same as verify but never exits with a non-zero code. For informational use.
 
 ```bash
-arch-tool status
-arch-tool status --format json
+archon status
+archon status --format json
 ```
 
-### `arch-tool sync` — Sync Managed Files *(Phase 2)*
+### `archon sync` — Sync Managed Files *(Phase 2)*
 
 Pull updated managed files from this repo into a downstream repo.
 
 ```bash
-arch-tool sync --dry-run                                    # preview changes
-arch-tool sync --arch-root ~/work/uor/hologram/holoarch     # explicit path
-arch-tool sync --force                                      # overwrite local changes
+archon sync --dry-run                                    # preview changes
+archon sync --arch-root ~/work/uor/hologram/holoarch     # explicit path
+archon sync --force                                      # overwrite local changes
 ```
 
 **What it does:**
@@ -451,27 +451,27 @@ arch-tool sync --force                                      # overwrite local ch
 2. For **fully-managed** files: compares SHA-256 hash with source; overwrites if changed
 3. For **section-managed** files: extracts managed sections from source; replaces only those sections in the downstream file
 4. For **unmanaged** files: skips entirely
-5. Records hashes in `.arch-tool/sync-state.yaml` for change detection
+5. Records hashes in `.archon/sync-state.yaml` for change detection
 6. AI merges when both versions have changed (preserves handwritten content)
 
-### `arch-tool adr new` — Create Architecture Decision *(Phase 2)*
+### `archon adr new` — Create Architecture Decision *(Phase 2)*
 
 Create a new ADR in this repo:
 
 ```bash
-arch-tool adr new --title "Use YAML for all config files"
-arch-tool adr list
+archon adr new --title "Use YAML for all config files"
+archon adr list
 ```
 
 Creates `specs/adrs/NNNN-use-yaml-for-all-config-files.md` with the next sequential number.
 
-### `arch-tool exception new` — Declare Policy Deviation *(Phase 2)*
+### `archon exception new` — Declare Policy Deviation *(Phase 2)*
 
 Declare an approved exception in a downstream repo's `hologram.repo.yaml`:
 
 ```bash
-arch-tool exception new --rule STR-003 --reason "Legacy layout, migrating Q2" --expires 2026-06-01
-arch-tool exception list
+archon exception new --rule STR-003 --reason "Legacy layout, migrating Q2" --expires 2026-06-01
+archon exception list
 ```
 
 Adds to the repo's `hologram.repo.yaml`:
@@ -482,14 +482,14 @@ exceptions:
     expires: "2026-06-01"
 ```
 
-### `arch-tool graph` — Ecosystem Map *(Phase 3)*
+### `archon graph` — Ecosystem Map *(Phase 3)*
 
 Build and display the contract dependency graph across all repos:
 
 ```bash
-arch-tool graph --repos-dir ~/work/uor/hologram   # scan all sibling repos
-arch-tool graph --format dot                       # graphviz output
-arch-tool graph --format json                      # machine-readable
+archon graph --repos-dir ~/work/uor/hologram   # scan all sibling repos
+archon graph --format dot                       # graphviz output
+archon graph --format json                      # machine-readable
 ```
 
 **What it shows:**
@@ -512,41 +512,41 @@ CONTRACT GRAPH:
   sandbox-runtime: hologram-sandbox → (no consumers)
 ```
 
-### `arch-tool serve` — HTTP API *(Phase 3)*
+### `archon serve` — HTTP API *(Phase 3)*
 
 Run a governance server that other tools and dashboards can query:
 
 ```bash
-arch-tool serve --port 8080 --repos-dir ~/work/uor/hologram
+archon serve --port 8080 --repos-dir ~/work/uor/hologram
 ```
 
-| Endpoint | Method | Description |
-|---|---|---|
-| `/repos` | GET | List all repos with conformance status |
-| `/repos/:name/status` | GET | Detailed conformance report |
-| `/verify` | POST | Run conformance on a repo path |
-| `/graph` | GET | Contract dependency graph (JSON or DOT) |
-| `/policies` | GET | Active policy rules |
-| `/drift` | GET | Repos behind on standards version |
+| Endpoint              | Method | Description                             |
+| --------------------- | ------ | --------------------------------------- |
+| `/repos`              | GET    | List all repos with conformance status  |
+| `/repos/:name/status` | GET    | Detailed conformance report             |
+| `/verify`             | POST   | Run conformance on a repo path          |
+| `/graph`              | GET    | Contract dependency graph (JSON or DOT) |
+| `/policies`           | GET    | Active policy rules                     |
+| `/drift`              | GET    | Repos behind on standards version       |
 
 ---
 
 ## AI Integration
 
-arch-tool uses AI at every stage:
+archon uses AI at every stage:
 
-| Stage | How AI helps |
-|---|---|
-| **init** | Analyzes Cargo.toml and existing files to determine repo role, contracts, and relevant docs |
-| **init** | Fills `<!-- TODO -->` placeholders with project-specific content using ADR context |
-| **sync** | Merges conflicting doc versions — preserves handwritten content while adding new guidance |
-| **doc selection** | Selects which optional docs are relevant when syncing |
+| Stage             | How AI helps                                                                                |
+| ----------------- | ------------------------------------------------------------------------------------------- |
+| **init**          | Analyzes Cargo.toml and existing files to determine repo role, contracts, and relevant docs |
+| **init**          | Fills `<!-- TODO -->` placeholders with project-specific content using ADR context          |
+| **sync**          | Merges conflicting doc versions — preserves handwritten content while adding new guidance   |
+| **doc selection** | Selects which optional docs are relevant when syncing                                       |
 
 **Backend detection** (automatic, in priority order):
 1. `ANTHROPIC_API_KEY` environment variable → calls Anthropic Messages API directly
 2. `claude` binary in PATH → pipes prompt to `claude --print`
 
-AI is always optional. If no backend is available, arch-tool falls back to templates with TODO placeholders. The workflow is: generate templates → human or AI fills them in later.
+AI is always optional. If no backend is available, archon falls back to templates with TODO placeholders. The workflow is: generate templates → human or AI fills them in later.
 
 ---
 
@@ -561,15 +561,15 @@ This is designed for a workflow where AI agents build the ecosystem's repos. Her
 3. The agent reads `hologram.repo.yaml` — which tells it the repo's role, contracts, and standards version
 4. The agent reads `specs/docs/architecture.md` — which has the project-specific architecture
 
-These files were generated by `arch-tool init` and kept current by `arch-tool sync`. They contain the decisions made in `hologram-architecture`, translated into guidance the agent can follow. **The agent never needs to read `hologram-architecture` directly.**
+These files were generated by `archon init` and kept current by `archon sync`. They contain the decisions made in `hologram-architecture`, translated into guidance the agent can follow. **The agent never needs to read `hologram-architecture` directly.**
 
 ### When you make an architecture decision
 
 1. Write an ADR in `hologram-architecture/specs/adrs/`: "hologram-sandbox must not import directly from hologram-ai"
 2. Encode the rule in `hologram-architecture/policies/architectural.yaml`
 3. Update templates in `hologram-architecture/templates/` if the rule needs to appear in AGENTS.md managed sections
-4. Run `arch-tool sync` in hologram-sandbox — the updated managed sections and policies flow into the repo
-5. Run `arch-tool verify` to confirm the rule passes (or file an exception)
+4. Run `archon sync` in hologram-sandbox — the updated managed sections and policies flow into the repo
+5. Run `archon verify` to confirm the rule passes (or file an exception)
 6. Next time an AI agent works in hologram-sandbox, it reads the updated AGENTS.md and follows the new rule
 
 ### When you bootstrap a new repo
@@ -577,15 +577,15 @@ These files were generated by `arch-tool init` and kept current by `arch-tool sy
 ```bash
 mkdir hologram-new-thing && cd hologram-new-thing
 cargo init --lib
-arch-tool init --arch-root ~/work/uor/hologram/hologram-architecture
+archon init --arch-root ~/work/uor/hologram/hologram-architecture
 ```
 
-arch-tool reads the architecture repo's policies and templates, analyzes the new project, generates all governance files, fills in documentation with AI, and the repo is immediately conformant. An AI agent can start working in it and will have full context about the ecosystem.
+archon reads the architecture repo's policies and templates, analyzes the new project, generates all governance files, fills in documentation with AI, and the repo is immediately conformant. An AI agent can start working in it and will have full context about the ecosystem.
 
 ### The information flow
 
 ```
-hologram-architecture          arch-tool sync/init            AI agent in downstream repo
+hologram-architecture          archon sync/init            AI agent in downstream repo
 ────────────────────          ──────────────────            ──────────────────────────
 ADR: "no cross-imports
   between sandbox/ai"   ──▶   Encodes as ARCH-003    ──▶   Agent reads AGENTS.md:
@@ -598,7 +598,7 @@ Template: updated                                           role=extension,
                               into AGENTS.md                hologram-ai
 ```
 
-The architecture repo holds the truth. arch-tool is the conveyor belt. Downstream repos receive guidance in files that AI agents already know how to read.
+The architecture repo holds the truth. archon is the conveyor belt. Downstream repos receive guidance in files that AI agents already know how to read.
 
 ---
 
@@ -609,9 +609,9 @@ Standards use date-based versions: `2026.03`, `2026.06`, `2026.09`, etc.
 - Each downstream repo declares its standards version in `hologram.repo.yaml`
 - Policy rules are versioned alongside standards
 - When the ecosystem advances (new rules, new requirements), bump the standards version
-- `arch-tool verify` checks that repos aren't too far behind
-- `arch-tool sync` helps repos catch up by pulling updated files
-- `arch-tool graph --drift` shows which repos are behind
+- `archon verify` checks that repos aren't too far behind
+- `archon sync` helps repos catch up by pulling updated files
+- `archon graph --drift` shows which repos are behind
 
 Drift is always explicit. A repo either conforms to its declared version, has approved exceptions, or is flagged as non-conformant. No silent drift.
 
@@ -619,31 +619,31 @@ Drift is always explicit. A repo either conforms to its declared version, has ap
 
 ## Repository Structure
 
-### This repo (arch-tool) — the tool
+### This repo (archon) — the tool
 
 ```
-arch-tool/
+archon/
 ├── Cargo.toml                    Workspace root (10 crates)
 ├── Justfile                      Build/test/release recipes
 ├── README.md                     This file
 │
 ├── specs/
 │   ├── plans/                    Tool implementation plans
-│   ├── prompts/                  Prompts for arch-tool development
+│   ├── prompts/                  Prompts for archon development
 │   ├── sprints/                  Archived sprints
 │   └── SPRINT.md                 Current sprint
 │
 ├── crates/
-│   ├── arch-tool-core/            Core types: RepoMeta, StandardsVersion, paths
-│   ├── arch-tool-policy/          Policy loading + evaluation engine
-│   ├── arch-tool-verify/          Conformance checking
-│   ├── arch-tool-sync/            File sync with managed sections
-│   ├── arch-tool-adr/             ADR and exception management
-│   ├── arch-tool-graph/           Contract/dependency graph
-│   ├── arch-tool-templates/       Template rendering (embedded init files)
-│   ├── arch-tool-ai/              AI backend (Anthropic API, Claude CLI)
-│   ├── arch-tool-cli/             CLI binary (clap)
-│   └── arch-tool-server/          HTTP server (axum)
+│   ├── archon-core/            Core types: RepoMeta, StandardsVersion, paths
+│   ├── archon-policy/          Policy loading + evaluation engine
+│   ├── archon-verify/          Conformance checking
+│   ├── archon-sync/            File sync with managed sections
+│   ├── archon-adr/             ADR and exception management
+│   ├── archon-graph/           Contract/dependency graph
+│   ├── archon-templates/       Template rendering (embedded init files)
+│   ├── archon-ai/              AI backend (Anthropic API, Claude CLI)
+│   ├── archon-cli/             CLI binary (clap)
+│   └── archon-server/          HTTP server (axum)
 │
 └── tests/
     └── fixtures/                 Test repos for integration tests
@@ -651,7 +651,7 @@ arch-tool/
 
 ### The architecture repo (hologram-architecture) — the authority
 
-arch-tool reads from this repo at runtime. Its expected layout:
+archon reads from this repo at runtime. Its expected layout:
 
 ```
 hologram-architecture/
@@ -672,13 +672,13 @@ hologram-architecture/
     └── upstream-architecture.md    Shared architecture summary
 ```
 
-arch-tool discovers the architecture repo automatically (sibling directory, `ARCH_TOOL_ROOT` env var, or `--arch-root` flag). If the architecture repo is not found, arch-tool falls back to built-in default policies.
+archon discovers the architecture repo automatically (sibling directory, `ARCHON_ROOT` env var, or `--arch-root` flag). If the architecture repo is not found, archon falls back to built-in default policies.
 
 ---
 
 ## Creating an Architecture Repository
 
-arch-tool reads decisions from a separate **architecture repository**. Here's how to create and manage one.
+archon reads decisions from a separate **architecture repository**. Here's how to create and manage one.
 
 ### Bootstrap
 
@@ -689,8 +689,8 @@ git init
 # Create the directory structure
 mkdir -p specs/adrs specs/plans specs/contracts policies templates standards ecosystem
 
-# Self-govern: the architecture repo uses arch-tool too
-arch-tool init --profile cli-tool
+# Self-govern: the architecture repo uses archon too
+archon init --profile cli-tool
 ```
 
 ### Required structure
@@ -731,7 +731,7 @@ hologram-architecture/
 cd hologram-architecture
 
 # 1. Write the ADR explaining why
-arch-tool adr new --title "Require error handling strategy docs"
+archon adr new --title "Require error handling strategy docs"
 
 # 2. Add the machine-readable rule
 cat >> policies/structural.yaml << 'EOF'
@@ -747,7 +747,7 @@ EOF
 # 3. Test impact across the ecosystem
 for repo in ../hologram ../hologram-ai ../hologram-sandbox; do
   echo "==> $(basename $repo)"
-  (cd "$repo" && arch-tool verify --arch-root ../hologram-architecture)
+  (cd "$repo" && archon verify --arch-root ../hologram-architecture)
 done
 
 # 4. Commit
@@ -761,17 +761,17 @@ After updating templates or policies in the architecture repo:
 ```bash
 # Sync all repos
 for repo in ../hologram ../hologram-ai ../hologram-sandbox; do
-  (cd "$repo" && arch-tool sync --arch-root ../hologram-architecture)
+  (cd "$repo" && archon sync --arch-root ../hologram-architecture)
 done
 ```
 
-Or set the `ARCH_TOOL_ROOT` env var once:
+Or set the `ARCHON_ROOT` env var once:
 
 ```bash
-export ARCH_TOOL_ROOT=~/work/uor/hologram/hologram-architecture
+export ARCHON_ROOT=~/work/uor/hologram/hologram-architecture
 cd ~/work/uor/hologram/hologram-sandbox
-arch-tool sync       # auto-discovers the architecture repo
-arch-tool verify     # checks against current policies
+archon sync       # auto-discovers the architecture repo
+archon verify     # checks against current policies
 ```
 
 ### Register a new repo
@@ -794,7 +794,7 @@ Then bootstrap the repo:
 ```bash
 cd ~/work/uor/hologram/hologram-new-thing
 cargo init --lib
-arch-tool init --arch-root ../hologram-architecture
+archon init --arch-root ../hologram-architecture
 ```
 
 ### Bump standards version
@@ -808,7 +808,7 @@ git add -A && git commit -m "feat(standards): bump to 2026.06"
 
 # Then update each downstream repo:
 for repo in ../hologram ../hologram-ai ../hologram-sandbox; do
-  (cd "$repo" && arch-tool sync && arch-tool verify)
+  (cd "$repo" && archon sync && archon verify)
 done
 ```
 
@@ -824,12 +824,12 @@ just test           # Run all workspace tests
 just clippy         # Lint with warnings as errors
 just build          # Debug build
 just build-release  # Release build
-just install        # Symlink release binary to ~/.local/bin/arch-tool
+just install        # Symlink release binary to ~/.local/bin/archon
 
-just run verify     # Run arch-tool with args via cargo
-just init           # Shortcut for arch-tool init
-just verify         # Shortcut for arch-tool verify
-just status         # Shortcut for arch-tool status
+just run verify     # Run archon with args via cargo
+just init           # Shortcut for archon init
+just verify         # Shortcut for archon verify
+just status         # Shortcut for archon status
 
 just release 2.0.0  # Cut a release with changelog
 just deps           # Show crate dependency tree
@@ -840,19 +840,19 @@ just deps           # Show crate dependency tree
 ## Crate Dependency Graph
 
 ```
-arch-tool-core             Foundation: types, paths, errors (no workspace deps)
+archon-core             Foundation: types, paths, errors (no workspace deps)
   ↑
-arch-tool-policy           Policy loading + evaluation
-arch-tool-sync             File sync engine
-arch-tool-adr              ADR + exception management
-arch-tool-graph            Contract/dependency graph
-arch-tool-templates        Template rendering
-arch-tool-ai               AI backend integration
+archon-policy           Policy loading + evaluation
+archon-sync             File sync engine
+archon-adr              ADR + exception management
+archon-graph            Contract/dependency graph
+archon-templates        Template rendering
+archon-ai               AI backend integration
   ↑
-arch-tool-verify           Conformance engine (core + policy)
+archon-verify           Conformance engine (core + policy)
   ↑
-arch-tool-cli              CLI binary (depends on all library crates)
-arch-tool-server           HTTP server (core + policy + verify + graph)
+archon-cli              CLI binary (depends on all library crates)
+archon-server           HTTP server (core + policy + verify + graph)
 ```
 
 All logic lives in library crates. The CLI and server are thin consumers — no duplication.

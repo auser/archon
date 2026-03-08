@@ -1,0 +1,19 @@
+[package]
+name = "archon-core"
+description = "Core types, models, and path discovery for archon"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde.workspace = true
+serde_yaml.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+chrono.workspace = true
+glob.workspace = true
+clap.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
