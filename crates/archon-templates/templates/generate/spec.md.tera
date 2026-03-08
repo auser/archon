@@ -1,0 +1,21 @@
+# {{ title }}
+
+| Field | Value |
+|---|---|
+| **Type** | Specification |
+| **Date** | {{ date }} |
+| **Author** | {{ author | default(value="archon generate") }} |
+| **Audience** | {{ audience }} |
+| **Status** | Draft |
+
+## Purpose
+
+{{ description }}
+
+{{ content }}
+{% if constraints %}
+
+## Constraints
+
+{{ constraints }}
+{% endif %}

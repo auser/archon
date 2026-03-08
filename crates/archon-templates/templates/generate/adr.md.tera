@@ -1,0 +1,21 @@
+# ADR-{{ adr_number }}: {{ title }}
+
+## Status
+
+Proposed
+
+## Date
+
+{{ date }}
+
+## Context
+
+{{ context_section }}
+
+## Decision
+
+{{ decision_section }}
+
+## Consequences
+
+{{ consequences_section }}

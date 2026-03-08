@@ -1,7 +1,9 @@
 pub mod adr;
+pub mod auth;
 pub mod bootstrap;
 pub mod decide;
 pub mod exception;
+pub mod generate;
 pub mod init;
 pub mod status;
 pub mod sync;

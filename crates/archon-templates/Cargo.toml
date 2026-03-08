@@ -10,3 +10,4 @@ archon-core.workspace = true
 serde.workspace = true
 serde_yaml.workspace = true
 anyhow.workspace = true
+tera.workspace = true

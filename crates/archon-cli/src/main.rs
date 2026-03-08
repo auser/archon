@@ -17,6 +17,8 @@ fn main() {
         app::Commands::Exception(cmd) => commands::exception::run(cmd),
         app::Commands::Bootstrap(args) => commands::bootstrap::run(args),
         app::Commands::Decide(args) => commands::decide::run(args),
+        app::Commands::Auth(cmd) => commands::auth::run(cmd),
+        app::Commands::Generate(args) => commands::generate::run(args),
     };
 
     if let Err(e) = result {

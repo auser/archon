@@ -44,6 +44,44 @@ pub enum Commands {
 
     /// Use AI to draft an architecture decision based on a question
     Decide(DecideArgs),
+
+    /// Manage AI provider authentication (OAuth login, refresh, status, logout)
+    #[command(subcommand)]
+    Auth(AuthCommands),
+
+    /// Interactively generate architecture documents (specs, prompts, ADRs, plans) using AI
+    Generate(GenerateArgs),
+}
+
+#[derive(Subcommand)]
+pub enum AuthCommands {
+    /// Log in to an AI provider via browser OAuth
+    Login {
+        /// Provider name: claude or openai
+        #[arg(long)]
+        provider: Option<String>,
+
+        /// Override the OAuth callback port
+        #[arg(long)]
+        port: Option<u16>,
+    },
+
+    /// Refresh an expired OAuth token
+    Refresh {
+        /// Provider name to refresh
+        #[arg(long)]
+        provider: Option<String>,
+    },
+
+    /// Show stored credential status
+    Status,
+
+    /// Remove stored credentials for a provider
+    Logout {
+        /// Provider name to log out
+        #[arg(long)]
+        provider: Option<String>,
+    },
 }
 
 #[derive(clap::Args)]
@@ -184,6 +222,58 @@ pub struct DecideArgs {
     /// Preview the draft without writing files
     #[arg(long)]
     pub dry_run: bool,
+}
+
+#[derive(clap::Args)]
+pub struct GenerateArgs {
+    /// Document type: spec, prompt, adr, plan
+    #[arg(long, value_enum)]
+    pub doc_type: Option<DocType>,
+
+    /// Title for the document
+    #[arg(long)]
+    pub title: Option<String>,
+
+    /// Brief description or purpose
+    #[arg(long)]
+    pub description: Option<String>,
+
+    /// Path to architecture repo (for context loading, especially ADRs)
+    #[arg(long)]
+    pub arch_root: Option<String>,
+
+    /// Preview the draft without writing files
+    #[arg(long)]
+    pub dry_run: bool,
+
+    /// Skip the AI refinement loop; generate from structured answers only
+    #[arg(long)]
+    pub no_refine: bool,
+}
+
+#[derive(Clone, Debug, clap::ValueEnum)]
+pub enum DocType {
+    Spec,
+    Prompt,
+    Adr,
+    Plan,
+}
+
+impl DocType {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            DocType::Spec => "spec",
+            DocType::Prompt => "prompt",
+            DocType::Adr => "adr",
+            DocType::Plan => "plan",
+        }
+    }
+}
+
+impl std::fmt::Display for DocType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
 }
 
 #[derive(Clone, Debug, clap::ValueEnum)]

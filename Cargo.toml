@@ -46,3 +46,6 @@ archon-templates = { path = "crates/archon-templates" }
 archon-server = { path = "crates/archon-server" }
 archon-ai = { path = "crates/archon-ai" }
 reqwest = { version = "0.12", features = ["json", "blocking"] }
+inquire = "0.7"
+indicatif = "0.17"
+tera = "1"

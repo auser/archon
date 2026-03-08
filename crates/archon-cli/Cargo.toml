@@ -22,6 +22,10 @@ colored.workspace = true
 anyhow.workspace = true
 serde_json.workspace = true
 serde_yaml.workspace = true
+inquire.workspace = true
+indicatif.workspace = true
+chrono.workspace = true
+tera.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true
