@@ -1,0 +1,48 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/arch-tool-cli",
+    "crates/arch-tool-core",
+    "crates/arch-tool-policy",
+    "crates/arch-tool-verify",
+    "crates/arch-tool-sync",
+    "crates/arch-tool-adr",
+    "crates/arch-tool-graph",
+    "crates/arch-tool-templates",
+    "crates/arch-tool-server",
+    "crates/arch-tool-ai",
+]
+
+[workspace.package]
+version = "2.0.0-alpha.1"
+edition = "2021"
+license = "MIT"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_yaml = "0.9"
+serde_json = "1"
+anyhow = "1"
+thiserror = "2"
+chrono = { version = "0.4", features = ["clock"] }
+sha2 = "0.10"
+clap = { version = "4", features = ["derive", "color"] }
+colored = "2"
+glob = "0.3"
+tempfile = "3"
+tokio = { version = "1", features = ["full"] }
+axum = "0.8"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+tracing = "0.1"
+tracing-subscriber = "0.3"
+
+arch-tool-core = { path = "crates/arch-tool-core" }
+arch-tool-policy = { path = "crates/arch-tool-policy" }
+arch-tool-verify = { path = "crates/arch-tool-verify" }
+arch-tool-sync = { path = "crates/arch-tool-sync" }
+arch-tool-adr = { path = "crates/arch-tool-adr" }
+arch-tool-graph = { path = "crates/arch-tool-graph" }
+arch-tool-templates = { path = "crates/arch-tool-templates" }
+arch-tool-server = { path = "crates/arch-tool-server" }
+arch-tool-ai = { path = "crates/arch-tool-ai" }
+reqwest = { version = "0.12", features = ["json", "blocking"] }

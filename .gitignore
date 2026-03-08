@@ -1,0 +1,5 @@
+/target
+.arch-tool/
+Cargo.lock
+.claude/
+specs/scratch.md
