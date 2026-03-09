@@ -70,9 +70,10 @@ pub fn generate_context(
 
     // Own public API surface (from broadcast).
     if let Some(broadcast) = broadcasts.get(&node.name) {
-        let has_api = broadcast.crates.iter().any(|c| {
-            !c.types.is_empty() || !c.traits.is_empty() || !c.functions.is_empty()
-        });
+        let has_api = broadcast
+            .crates
+            .iter()
+            .any(|c| !c.types.is_empty() || !c.traits.is_empty() || !c.functions.is_empty());
 
         if has_api {
             out.push_str("### Your public API surface\n\n");

@@ -88,8 +88,7 @@ fn run_tui(
     }
 
     disable_raw_mode().context("disabling raw mode")?;
-    execute!(terminal.backend_mut(), LeaveAlternateScreen)
-        .context("leaving alternate screen")?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen).context("leaving alternate screen")?;
     terminal.show_cursor().context("showing cursor")?;
 
     Ok(())

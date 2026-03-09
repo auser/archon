@@ -56,7 +56,12 @@ impl Graph {
         // Compute inverse edges (dependents).
         let dep_map: HashMap<&str, Vec<&str>> = manifests
             .iter()
-            .map(|m| (m.name.as_str(), m.depends_on.iter().map(|s| s.as_str()).collect()))
+            .map(|m| {
+                (
+                    m.name.as_str(),
+                    m.depends_on.iter().map(|s| s.as_str()).collect(),
+                )
+            })
             .collect();
 
         for node in &mut nodes {
@@ -81,8 +86,8 @@ impl Graph {
     pub fn load(path: &Path) -> Result<Self> {
         let content =
             std::fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
-        let graph: Graph =
-            serde_yaml::from_str(&content).with_context(|| format!("parsing {}", path.display()))?;
+        let graph: Graph = serde_yaml::from_str(&content)
+            .with_context(|| format!("parsing {}", path.display()))?;
         Ok(graph)
     }
 
@@ -279,11 +284,7 @@ pub fn collect_manifests(root: &Path) -> Result<Vec<(std::path::PathBuf, Manifes
                 match Manifest::load(&path) {
                     Ok(manifest) => results.push((path, manifest)),
                     Err(e) => {
-                        eprintln!(
-                            "warning: skipping {}: {}",
-                            manifest_path.display(),
-                            e
-                        );
+                        eprintln!("warning: skipping {}: {}", manifest_path.display(), e);
                     }
                 }
             }
@@ -302,12 +303,16 @@ pub fn collect_broadcasts(broadcasts_dir: &Path) -> Result<HashMap<String, Broad
         return Ok(broadcasts);
     }
 
-    for entry in
-        std::fs::read_dir(broadcasts_dir).with_context(|| format!("reading {}", broadcasts_dir.display()))?
+    for entry in std::fs::read_dir(broadcasts_dir)
+        .with_context(|| format!("reading {}", broadcasts_dir.display()))?
     {
         let entry = entry?;
         let path = entry.path();
-        if path.extension().map(|e| e == "yaml" || e == "yml").unwrap_or(false) {
+        if path
+            .extension()
+            .map(|e| e == "yaml" || e == "yml")
+            .unwrap_or(false)
+        {
             let content = std::fs::read_to_string(&path)
                 .with_context(|| format!("reading {}", path.display()))?;
             let broadcast: Broadcast = serde_yaml::from_str(&content)

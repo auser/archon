@@ -113,9 +113,7 @@ impl TreeState {
 
     fn build_tree(&mut self, graph: &Graph, name: &str, depth: usize) {
         let node = graph.find_node(name);
-        let children: Vec<String> = node
-            .map(|n| n.depends_on.clone())
-            .unwrap_or_default();
+        let children: Vec<String> = node.map(|n| n.depends_on.clone()).unwrap_or_default();
         let has_children = !children.is_empty();
         let is_expanded = self.expanded.contains(name);
 
@@ -230,8 +228,8 @@ pub struct EditState {
     pub role: Role,
     pub depends_on: Vec<String>,
     pub provides: Vec<String>,
-    pub field_index: usize,       // which field is selected (0=desc, 1=role, 2=deps, 3=provides)
-    pub editing_text: bool,       // currently typing in a text field
+    pub field_index: usize, // which field is selected (0=desc, 1=role, 2=deps, 3=provides)
+    pub editing_text: bool, // currently typing in a text field
 }
 
 impl EditState {
@@ -252,7 +250,11 @@ impl EditState {
     }
 
     pub fn prev_field(&mut self) {
-        self.field_index = if self.field_index == 0 { 3 } else { self.field_index - 1 };
+        self.field_index = if self.field_index == 0 {
+            3
+        } else {
+            self.field_index - 1
+        };
     }
 
     pub fn cycle_role(&mut self) {
@@ -439,8 +441,10 @@ impl App {
         let (repo_path, manifest) = match manifest_entry {
             Some((p, m)) => (p.clone(), m.clone()),
             None => {
-                self.action_output =
-                    Some(ActionOutput::new("Verify", &format!("No manifest found for '{}'", name)));
+                self.action_output = Some(ActionOutput::new(
+                    "Verify",
+                    &format!("No manifest found for '{}'", name),
+                ));
                 return;
             }
         };
@@ -454,7 +458,11 @@ impl App {
         }
 
         let mut output_lines = Vec::new();
-        output_lines.push(format!("Verifying {} ({} rules)...", name, manifest.rules.len()));
+        output_lines.push(format!(
+            "Verifying {} ({} rules)...",
+            name,
+            manifest.rules.len()
+        ));
         output_lines.push(String::new());
 
         let mut failures = 0u32;
@@ -512,8 +520,10 @@ impl App {
         let repo_path = match manifest_entry {
             Some((p, _)) => p.clone(),
             None => {
-                self.action_output =
-                    Some(ActionOutput::new("Scan", &format!("No manifest found for '{}'", name)));
+                self.action_output = Some(ActionOutput::new(
+                    "Scan",
+                    &format!("No manifest found for '{}'", name),
+                ));
                 return;
             }
         };
@@ -537,10 +547,7 @@ impl App {
 
     pub fn run_assemble(&mut self) {
         let result = std::process::Command::new("archon")
-            .args([
-                "assemble",
-                "--root",
-            ])
+            .args(["assemble", "--root"])
             .arg(&self.root)
             .arg("--registry")
             .arg(&self.registry)

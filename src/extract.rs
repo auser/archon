@@ -53,10 +53,7 @@ fn find_entry_point(src_dir: &Path) -> Result<PathBuf> {
     if main_rs.exists() {
         return Ok(main_rs);
     }
-    anyhow::bail!(
-        "no lib.rs or main.rs found in {}",
-        src_dir.display()
-    );
+    anyhow::bail!("no lib.rs or main.rs found in {}", src_dir.display());
 }
 
 fn is_pub(vis: &Visibility) -> bool {
@@ -362,7 +359,9 @@ fn deduplicate_contracts(surface: &mut CrateSurface) {
             }
         })
         .collect();
-    surface.contracts.sort_by(|a, b| a.contract.cmp(&b.contract));
+    surface
+        .contracts
+        .sort_by(|a, b| a.contract.cmp(&b.contract));
 }
 
 fn extract_from_file_with_contracts(
@@ -381,8 +380,8 @@ fn extract_from_file_with_contracts(
 
     let source = std::fs::read_to_string(file_path)
         .with_context(|| format!("reading {}", file_path.display()))?;
-    let syntax = syn::parse_file(&source)
-        .with_context(|| format!("parsing {}", file_path.display()))?;
+    let syntax =
+        syn::parse_file(&source).with_context(|| format!("parsing {}", file_path.display()))?;
 
     for item in &syntax.items {
         extract_item_with_contracts(item, file_path, src_dir, surface, visited)?;

@@ -79,7 +79,9 @@ fn handle_edit(app: &mut App, key: KeyEvent) {
                 edit.editing_text = false;
             }
             KeyCode::Backspace => match edit.field_index {
-                0 => { edit.description.pop(); }
+                0 => {
+                    edit.description.pop();
+                }
                 3 => {
                     // Edit provides as comma-separated
                     let mut text = edit.provides.join(", ");

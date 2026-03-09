@@ -87,9 +87,7 @@ fn draw_node_list(f: &mut Frame, app: &mut App, area: Rect) {
                 Style::default()
             };
 
-            let role_tag = node
-                .map(|n| format!("{}", n.role))
-                .unwrap_or_default();
+            let role_tag = node.map(|n| format!("{}", n.role)).unwrap_or_default();
             let role_span = Span::styled(
                 format!("[{}] ", &role_tag[..role_tag.len().min(3)]),
                 Style::default().fg(role_color),
@@ -140,8 +138,7 @@ fn draw_node_list(f: &mut Frame, app: &mut App, area: Rect) {
         } else {
             format!("/{}", app.search.query)
         };
-        let search = Paragraph::new(search_text)
-            .style(Style::default().fg(Color::Yellow));
+        let search = Paragraph::new(search_text).style(Style::default().fg(Color::Yellow));
         f.render_widget(search, search_area);
     }
 }
@@ -172,8 +169,8 @@ fn draw_ego_graph(f: &mut Frame, app: &App, area: Rect) {
     let node = match app.selected_node() {
         Some(n) => n,
         None => {
-            let msg = Paragraph::new("No node selected")
-                .style(Style::default().fg(Color::DarkGray));
+            let msg =
+                Paragraph::new("No node selected").style(Style::default().fg(Color::DarkGray));
             f.render_widget(msg, inner);
             return;
         }
@@ -258,12 +255,17 @@ fn clamp_names(names: &[String], max: usize) -> (Vec<String>, usize) {
     }
 }
 
-fn render_box_row<'a>(names: &[String], width: usize, app: &App, _center_name: &str) -> Vec<Line<'a>> {
+fn render_box_row<'a>(
+    names: &[String],
+    width: usize,
+    app: &App,
+    _center_name: &str,
+) -> Vec<Line<'a>> {
     // Each box: ┌──name──┐ / │  name  │ / └────────┘
     let box_width = |name: &str| -> usize { name.len() + 4 };
 
-    let total_width: usize = names.iter().map(|n| box_width(n)).sum::<usize>()
-        + names.len().saturating_sub(1) * 2; // spacing between boxes
+    let total_width: usize =
+        names.iter().map(|n| box_width(n)).sum::<usize>() + names.len().saturating_sub(1) * 2; // spacing between boxes
 
     let start_pad = if width > total_width {
         (width - total_width) / 2
@@ -316,14 +318,25 @@ fn render_box_row<'a>(names: &[String], width: usize, app: &App, _center_name: &
         }
 
         let node = app.graph.find_node(name);
-        let role_color = node.map(|n| App::role_color(&n.role)).unwrap_or(Color::White);
+        let role_color = node
+            .map(|n| App::role_color(&n.role))
+            .unwrap_or(Color::White);
 
         let is_impacted = app.mode == Mode::Impact && app.impact_nodes.contains(name);
         let color = if is_impacted { Color::Red } else { role_color };
 
-        mid_spans.push(Span::styled("\u{2502} ", Style::default().fg(Color::DarkGray)));
-        mid_spans.push(Span::styled(name.clone(), Style::default().fg(color).add_modifier(Modifier::BOLD)));
-        mid_spans.push(Span::styled(" \u{2502}", Style::default().fg(Color::DarkGray)));
+        mid_spans.push(Span::styled(
+            "\u{2502} ",
+            Style::default().fg(Color::DarkGray),
+        ));
+        mid_spans.push(Span::styled(
+            name.clone(),
+            Style::default().fg(color).add_modifier(Modifier::BOLD),
+        ));
+        mid_spans.push(Span::styled(
+            " \u{2502}",
+            Style::default().fg(Color::DarkGray),
+        ));
     }
 
     let mid_line = Line::from(mid_spans);
@@ -331,7 +344,12 @@ fn render_box_row<'a>(names: &[String], width: usize, app: &App, _center_name: &
     vec![top_line, mid_line, bot_line]
 }
 
-fn render_single_box(name: &str, width: usize, highlight: bool, color: Color) -> Vec<Line<'static>> {
+fn render_single_box(
+    name: &str,
+    width: usize,
+    highlight: bool,
+    color: Color,
+) -> Vec<Line<'static>> {
     let bw = name.len() + 2;
     let total = bw + 2; // box chars
     let pad = if width > total {
@@ -407,8 +425,7 @@ fn draw_tree_view(f: &mut Frame, app: &App, area: Rect) {
     f.render_widget(block, area);
 
     if app.tree_state.flat_rows.is_empty() {
-        let msg = Paragraph::new("No tree to display")
-            .style(Style::default().fg(Color::DarkGray));
+        let msg = Paragraph::new("No tree to display").style(Style::default().fg(Color::DarkGray));
         f.render_widget(msg, inner);
         return;
     }
@@ -470,14 +487,24 @@ fn draw_path_view(f: &mut Frame, app: &App, area: Rect) {
     if let Some(ref from) = app.path_finder.from {
         lines.push(Line::from(vec![
             Span::styled("From: ", Style::default().fg(Color::DarkGray)),
-            Span::styled(from.clone(), Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                from.clone(),
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
         ]));
     }
 
     if let Some(ref to) = app.path_finder.to {
         lines.push(Line::from(vec![
             Span::styled("  To: ", Style::default().fg(Color::DarkGray)),
-            Span::styled(to.clone(), Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                to.clone(),
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
         ]));
     } else {
         lines.push(Line::from(Span::styled(
@@ -491,7 +518,9 @@ fn draw_path_view(f: &mut Frame, app: &App, area: Rect) {
     if let Some(ref path) = app.path_finder.result {
         lines.push(Line::from(Span::styled(
             format!("Path ({} hops):", path.len() - 1),
-            Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
         )));
         lines.push(Line::raw(""));
 
@@ -515,9 +544,7 @@ fn draw_path_view(f: &mut Frame, app: &App, area: Rect) {
                 Span::raw(pad),
                 Span::styled(
                     name.clone(),
-                    Style::default()
-                        .fg(role_color)
-                        .add_modifier(Modifier::BOLD),
+                    Style::default().fg(role_color).add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(desc, Style::default().fg(Color::DarkGray)),
             ]));
@@ -709,7 +736,9 @@ fn draw_edit_panel(f: &mut Frame, edit: &super::app::EditState, area: Rect) {
 
     // Field 0: description
     let desc_style = if edit.field_index == 0 {
-        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD)
     } else {
         Style::default().fg(Color::DarkGray)
     };
@@ -724,7 +753,9 @@ fn draw_edit_panel(f: &mut Frame, edit: &super::app::EditState, area: Rect) {
 
     // Field 1: role
     let role_style = if edit.field_index == 1 {
-        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD)
     } else {
         Style::default().fg(Color::DarkGray)
     };
@@ -744,13 +775,18 @@ fn draw_edit_panel(f: &mut Frame, edit: &super::app::EditState, area: Rect) {
 
     // Field 2: depends_on
     let deps_style = if edit.field_index == 2 {
-        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD)
     } else {
         Style::default().fg(Color::DarkGray)
     };
     lines.push(Line::from(Span::styled("depends_on:", deps_style)));
     if edit.depends_on.is_empty() {
-        lines.push(Line::from(Span::styled("  (none)", Style::default().fg(Color::DarkGray))));
+        lines.push(Line::from(Span::styled(
+            "  (none)",
+            Style::default().fg(Color::DarkGray),
+        )));
     } else {
         for dep in &edit.depends_on {
             lines.push(Line::from(Span::raw(format!("  - {}", dep))));
@@ -766,7 +802,9 @@ fn draw_edit_panel(f: &mut Frame, edit: &super::app::EditState, area: Rect) {
 
     // Field 3: provides
     let prov_style = if edit.field_index == 3 {
-        Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD)
     } else {
         Style::default().fg(Color::DarkGray)
     };
@@ -780,9 +818,17 @@ fn draw_edit_panel(f: &mut Frame, edit: &super::app::EditState, area: Rect) {
 
     lines.push(Line::raw(""));
     lines.push(Line::from(vec![
-        Span::styled("[s]", Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[s]",
+            Style::default()
+                .fg(Color::Green)
+                .add_modifier(Modifier::BOLD),
+        ),
         Span::styled(" save  ", Style::default().fg(Color::DarkGray)),
-        Span::styled("[Esc]", Style::default().fg(Color::Red).add_modifier(Modifier::BOLD)),
+        Span::styled(
+            "[Esc]",
+            Style::default().fg(Color::Red).add_modifier(Modifier::BOLD),
+        ),
         Span::styled(" cancel", Style::default().fg(Color::DarkGray)),
     ]));
 
@@ -906,26 +952,38 @@ fn draw_help(f: &mut Frame, area: Rect) {
         .border_style(Style::default().fg(Color::Cyan));
 
     let help_text = vec![
-        Line::from(Span::styled("Navigation", Style::default().add_modifier(Modifier::BOLD))),
+        Line::from(Span::styled(
+            "Navigation",
+            Style::default().add_modifier(Modifier::BOLD),
+        )),
         Line::from("  j/k or Up/Down  Navigate list"),
         Line::from("  Tab             Switch focus (list/detail)"),
         Line::from("  /               Search/filter nodes"),
         Line::from("  r               Cycle role filter"),
         Line::raw(""),
-        Line::from(Span::styled("View Modes", Style::default().add_modifier(Modifier::BOLD))),
+        Line::from(Span::styled(
+            "View Modes",
+            Style::default().add_modifier(Modifier::BOLD),
+        )),
         Line::from("  t               Tree view (expand deps)"),
         Line::from("  p               Path finder (select two nodes)"),
         Line::from("  i               Impact analysis (reverse deps)"),
         Line::from("  Esc             Return to normal mode"),
         Line::raw(""),
-        Line::from(Span::styled("Actions", Style::default().add_modifier(Modifier::BOLD))),
+        Line::from(Span::styled(
+            "Actions",
+            Style::default().add_modifier(Modifier::BOLD),
+        )),
         Line::from("  s               Scan selected repo"),
         Line::from("  a               Assemble graph"),
         Line::from("  v               Verify selected repo"),
         Line::from("  e               Edit manifest"),
         Line::from("  c               Check graph consistency"),
         Line::raw(""),
-        Line::from(Span::styled("General", Style::default().add_modifier(Modifier::BOLD))),
+        Line::from(Span::styled(
+            "General",
+            Style::default().add_modifier(Modifier::BOLD),
+        )),
         Line::from("  ?               Toggle this help"),
         Line::from("  q               Quit"),
     ];

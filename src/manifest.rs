@@ -76,8 +76,8 @@ impl Manifest {
         let path = dir.join(MANIFEST_FILE);
         let content = std::fs::read_to_string(&path)
             .with_context(|| format!("reading {}", path.display()))?;
-        let manifest: Manifest =
-            serde_yaml::from_str(&content).with_context(|| format!("parsing {}", path.display()))?;
+        let manifest: Manifest = serde_yaml::from_str(&content)
+            .with_context(|| format!("parsing {}", path.display()))?;
         Ok(manifest)
     }
 
