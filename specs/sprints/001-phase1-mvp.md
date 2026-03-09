@@ -37,13 +37,13 @@
 
 ### 5. holoarch-templates
 - [x] `renderer.rs` — template rendering with {{var}} substitution
-- [x] Template files: hologram.repo.yaml, AGENTS.md, CLAUDE.md, architecture.md, development.md
+- [x] Template files: archon.repo.yaml, AGENTS.md, CLAUDE.md, architecture.md, development.md
 - [x] Unit tests: variable substitution (2 tests passing)
 
 ### 6. holoarch-cli
 - [x] `app.rs` — clap derive structs for init, verify, status
 - [x] `output.rs` — colored output helpers
-- [x] `commands/init.rs` — generate hologram.repo.yaml + base docs
+- [x] `commands/init.rs` — generate archon.repo.yaml + base docs
 - [x] `commands/verify.rs` — run conformance checks with --format and --strict
 - [x] `commands/status.rs` — read-only summary
 - [x] `main.rs` — command dispatch

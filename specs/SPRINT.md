@@ -46,8 +46,8 @@
 - [x] Managed section markers: `HOLOARCH` → `ARCHON`
 - [x] Env var: `ARCHON_ROOT`
 
-### 6. hologram-architecture plan
-- [x] Draft plan at `specs/plans/hologram-architecture-plan.md`
+### 6. Architecture repo plan
+- [x] Draft plan at `specs/plans/architecture-repo-plan.md`
 
 ### 7. Verification
 - [x] `cargo check --workspace`

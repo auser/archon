@@ -5,198 +5,155 @@ Get archon running in under 5 minutes.
 ## Install
 
 ```bash
-# From source (requires Rust 1.70+)
-git clone <repo-url> && cd archon
-cargo install --path crates/archon-cli
-
-# Or build without installing
-cargo build --release
-# Binary at: target/release/archon
+cargo install --path .
+# or: just install
 ```
 
-Verify it works:
-
-```bash
-archon --version
-archon --help
-```
-
-## 1. Set up AI authentication (optional but recommended)
-
-archon uses AI for document generation, TODO filling, and intelligent merges. Without AI, it falls back to templates with `<!-- TODO -->` placeholders.
-
-**Option A: OAuth login (uses your Claude or OpenAI subscription)**
-
-```bash
-archon auth login
-# Select "claude" or "openai", then complete the browser OAuth flow
-
-archon auth status
-# Confirm credentials are stored
-```
-
-**Option B: API key**
-
-```bash
-export ANTHROPIC_API_KEY=sk-ant-...
-```
-
-**Option C: Claude CLI**
-
-If you have [Claude Code](https://claude.ai/claude-code) installed, archon detects it automatically.
-
-Backend priority: `ANTHROPIC_API_KEY` > `claude` CLI > stored OAuth credentials.
-
-## 2. Bootstrap a downstream repo
-
-Navigate to any Rust project and initialize it:
+## 1. Initialize a repo
 
 ```bash
 cd ~/work/my-project
 archon init
 ```
 
+The interactive wizard prompts for name, description, role, and dependencies. It auto-detects Cargo.toml workspace members and generates default rules.
+
 This creates:
 
 | File | Purpose |
 |------|---------|
-| `hologram.repo.yaml` | Repo identity — role, contracts, standards version |
-| `AGENTS.md` | Guidance for AI agents working in this repo |
-| `CLAUDE.md` | Context for Claude Code sessions |
-| `specs/docs/architecture.md` | Project-specific architecture docs |
-| `specs/docs/development.md` | Development guide |
+| `archon.yaml` | Repo identity — role, dependencies, rules |
+| `CLAUDE.md` | Context injection target for AI agents |
 
-With AI available, archon analyzes your `Cargo.toml` and fills in all `<!-- TODO -->` placeholders with project-specific content.
-
-**Options:**
+Options:
 
 ```bash
-archon init --profile rust-workspace   # skip AI, use a preset profile
-archon init --dry-run                  # preview without writing files
-archon init --force                    # overwrite existing files
-archon init --no-ai                    # skip AI even if available
+archon init --registry ../archon-registry   # discover sibling repos
+archon init --owner "@my-team"                  # set owner
 ```
 
-## 3. Check conformance
+Non-interactive mode activates automatically when stdin is not a TTY (e.g. in CI).
+
+## 2. Extract your public API
 
 ```bash
+archon scan
+```
+
+Parses your crate source with `syn`, extracts all `pub` types/traits/functions, and writes `.archon/broadcast.yaml` — a machine-readable API surface. If a registry is accessible, also copies the broadcast there.
+
+Tag items with contracts using doc comments:
+
+```rust
+/// @contract(my-contract-name)
+pub struct MyType { ... }
+```
+
+## 3. Assemble the ecosystem graph
+
+Run from the parent directory containing all repos:
+
+```bash
+archon assemble --root .. --distribute
+```
+
+This collects all `archon.yaml` manifests, builds `graph.yaml`, generates per-repo AI context, and (with `--distribute`) injects context into each repo's `CLAUDE.md`.
+
+## 4. Validate
+
+```bash
+# Check graph consistency (missing deps, cycles)
+archon check
+
+# Run rules defined in archon.yaml
 archon verify
 ```
 
-Reports which governance rules pass or fail:
-
+```bash
+archon check --format json    # for CI
+archon verify --format json   # for CI
 ```
-archon verify: my-project
-  standards version: 2026.03
 
-  ✓ [STR-001] hologram.repo.yaml exists
-  ✓ [STR-002] AGENTS.md exists
-  ⚠ [STR-003] specs/docs/ not found
-  ✓ [POL-001] standards_version: 2026.03
+## 5. Set up an architecture repo
 
-  PASS 3/4 checks passed, 1 warning
-```
+An architecture repo is a dedicated repo that holds the graph and broadcasts for the whole ecosystem. Create one alongside your project repos:
 
 ```bash
-archon verify --strict     # treat warnings as errors (for CI)
-archon verify --format json # machine-readable output
+mkdir hologram-architecture && cd hologram-architecture
+git init
+mkdir -p archon-registry/broadcasts
 ```
 
-## 4. View status
+Directory layout:
+
+```
+~/work/
+  hologram/                 # core repo
+  hologram-ai/              # extension
+  hologram-sandbox/         # extension
+  hologram-architecture/    # architecture repo ← you are here
+```
+
+Bootstrap the entire ecosystem in one command — this creates `archon.yaml` for every sibling repo that has a `Cargo.toml` but no manifest yet:
 
 ```bash
-archon status              # same checks as verify, never exits non-zero
+archon assemble --root .. --bootstrap --registry archon-registry --distribute
 ```
 
-## 5. Sync from the architecture repo
+This will:
+1. Scan sibling directories for Rust projects without manifests
+2. Auto-generate a minimal `archon.yaml` for each (name from Cargo.toml, default rules)
+3. Assemble the full dependency graph
+4. Distribute AI context to each repo's `CLAUDE.md`
 
-If you have access to the architecture repository (`hologram-architecture`):
+After bootstrap, use `describe` to configure everything in plain English instead of editing YAML by hand:
 
 ```bash
-# Auto-detect sibling directory
-archon sync
-
-# Or specify explicitly
-archon sync --arch-root ~/work/hologram-architecture
-
-# Or set once via env var
-export ARCHON_ROOT=~/work/hologram-architecture
-archon sync
+archon describe --root .. "hologram is the core runtime. hologram-ai extends it with AI inference. hologram-sandbox provides sandboxed execution depending on hologram. archon is a developer tool."
 ```
 
-This updates managed files and sections in your repo to reflect the latest architecture decisions.
+AI reads your description, updates each repo's role, dependencies, and description, then writes the manifests. Use `--dry-run` to preview first.
 
-## 6. Generate documents with AI
-
-Interactively create specs, prompts, ADRs, or implementation plans:
+Then re-assemble:
 
 ```bash
-archon generate
+archon assemble --root .. --registry archon-registry --distribute
+archon check
 ```
 
-Follow the prompts to select document type, provide a title and description, and answer AI clarifying questions. The AI generates a complete document from your answers.
+You can run `describe` again anytime to refine — it's incremental:
 
 ```bash
-archon generate --doc-type spec --title "Auth Module" --dry-run  # non-interactive preview
-archon generate --no-refine                                       # skip AI Q&A, generate directly
+archon describe --root .. "hologram-sandbox also depends on hologram-ai for model scoring"
 ```
 
-## 7. Manage ADRs and exceptions
+When a developer adds a new repo later:
 
 ```bash
-# Create an Architecture Decision Record
-archon adr new --title "Use YAML for all config files"
-archon adr list
-
-# Declare a policy exception
-archon exception new --rule STR-003 --reason "Migrating in Q2" --expires 2026-06-01
-archon exception list
+cd ~/work/new-repo
+archon init --registry ../hologram-architecture/archon-registry
+archon scan --registry ../hologram-architecture/archon-registry
 ```
 
-## 8. AI-drafted decisions
+Then the architecture maintainer re-runs `assemble --distribute` to update context for everyone.
 
-```bash
-archon decide --title "Should we use gRPC or REST for inter-service communication?"
-archon decide --title "Error handling strategy" --dry-run
-```
-
-## Common workflows
-
-### CI integration
+## CI integration
 
 ```yaml
 # .github/workflows/archon.yml
 - name: Architecture conformance
-  run: archon verify --strict --format json
-```
-
-### New repo setup (full)
-
-```bash
-mkdir my-new-repo && cd my-new-repo
-cargo init --lib
-archon init --arch-root ../hologram-architecture
-archon verify
-```
-
-### Auth management
-
-```bash
-archon auth login                      # interactive provider selection
-archon auth login --provider claude    # direct login
-archon auth refresh                    # refresh expired token
-archon auth status                     # check stored credentials
-archon auth logout                     # remove credentials
+  run: |
+    archon check --format json
+    archon verify --format json
 ```
 
 ## Environment variables
 
 | Variable | Purpose |
 |----------|---------|
-| `ANTHROPIC_API_KEY` | Anthropic API key (highest priority AI backend) |
-| `ARCHON_ROOT` | Path to the architecture repo |
+| `ANTHROPIC_API_KEY` | API key for AI features (optional) |
 
 ## What's next
 
-- Read the full [README](README.md) for architecture details
+- Read the [README](README.md) for full command reference
 - Run `archon --help` or `archon <command> --help` for all options
