@@ -56,12 +56,13 @@ release VERSION:
     just ci
     # Update version in Cargo.toml
     sed -i.bak 's/^version = ".*"/version = "{{VERSION}}"/' Cargo.toml && rm Cargo.toml.bak
-    cargo check  # updates Cargo.lock
+    cargo check
     # Generate changelog
     touch CHANGELOG.md
     git cliff --tag "v{{VERSION}}" --unreleased --prepend CHANGELOG.md
-    # Commit, tag, push
-    git add Cargo.toml Cargo.lock CHANGELOG.md
+    # Commit, tag, push (Cargo.lock may be gitignored for binaries)
+    git add Cargo.toml CHANGELOG.md
+    git add Cargo.lock 2>/dev/null || true
     git commit -m "chore(release): v{{VERSION}}"
     git tag "v{{VERSION}}"
     git push --follow-tags
