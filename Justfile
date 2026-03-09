@@ -80,8 +80,8 @@ release VERSION:
     git add Cargo.toml CHANGELOG.md
     git add Cargo.lock 2>/dev/null || true
     git commit -m "chore(release): $TAG"
-    git tag "$TAG"
-    git push --follow-tags
+    git tag -a "$TAG" -m "Release $TAG"
+    git push origin main "$TAG"
 
     # Create GitHub release (binaries are built by the release workflow)
     gh release create "$TAG" \
