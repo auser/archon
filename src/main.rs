@@ -2659,7 +2659,11 @@ fn cmd_update(version: Option<&str>, from_source: bool) -> Result<()> {
                 // Line looks like: "tag_name": "v0.3.3",
                 let after_colon = l.split(':').nth(1)?;
                 let trimmed = after_colon.trim().trim_matches(|c| c == '"' || c == ',');
-                if trimmed.is_empty() { None } else { Some(trimmed.to_string()) }
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed.to_string())
+                }
             })
             .ok_or_else(|| anyhow::anyhow!("could not parse latest version from GitHub API"))?;
         tag
