@@ -110,6 +110,15 @@ enum Commands {
     /// Query and visualize the dependency graph
     #[command(subcommand)]
     Graph(GraphCommands),
+    /// Update archon to the latest version
+    Update {
+        /// Install a specific version (e.g. v0.2.0)
+        #[arg(long)]
+        version: Option<String>,
+        /// Build from source instead of downloading a binary
+        #[arg(long)]
+        from_source: bool,
+    },
     /// Interactive architecture dashboard
     Dashboard {
         /// Root directory containing repo directories
@@ -230,6 +239,7 @@ fn main() {
             verbose,
         } => cmd_describe(&description.join(" "), &root, dry_run, verbose),
         Commands::Graph(sub) => cmd_graph(sub),
+        Commands::Update { version, from_source } => cmd_update(version.as_deref(), from_source),
         Commands::Dashboard { root, registry, web } => {
             dashboard::run_dashboard(&root, &registry, web)
         }
@@ -2378,4 +2388,170 @@ fn find_crate_src(repo_root: &Path, crate_name: &str) -> Option<PathBuf> {
     }
 
     None
+}
+
+// ─── Update ────────────────────────────────────────────────────────────────────
+
+fn cmd_update(version: Option<&str>, from_source: bool) -> Result<()> {
+    const REPO: &str = "auser/archon";
+
+    eprintln!();
+    eprintln!(
+        "  {} — {}",
+        "archon update".cyan().bold(),
+        "Self-update to latest version"
+    );
+    eprintln!();
+
+    // Determine current binary location.
+    let current_exe = std::env::current_exe()
+        .context("could not determine current executable path")?;
+    let install_dir = current_exe
+        .parent()
+        .ok_or_else(|| anyhow::anyhow!("could not determine install directory"))?;
+
+    eprintln!(
+        "  {} current binary: {}",
+        "·".dimmed(),
+        current_exe.display().to_string().dimmed(),
+    );
+
+    if from_source {
+        eprintln!("  {} Building from source...", "·".dimmed());
+        let mut cmd = std::process::Command::new("cargo");
+        cmd.args(["install", "--git", &format!("https://github.com/{REPO}.git")]);
+        if let Some(v) = version {
+            cmd.args(["--tag", v]);
+        }
+        cmd.arg("--force");
+        let status = cmd.status().context("failed to run cargo install")?;
+        if !status.success() {
+            anyhow::bail!("cargo install failed");
+        }
+        eprintln!();
+        eprintln!("  {} Updated from source", "✓".green().bold());
+        eprintln!();
+        return Ok(());
+    }
+
+    // Determine target version.
+    let target_version = if let Some(v) = version {
+        v.to_string()
+    } else {
+        eprintln!("  {} Checking latest release...", "·".dimmed());
+        let output = std::process::Command::new("curl")
+            .args([
+                "-fsSL",
+                &format!("https://api.github.com/repos/{REPO}/releases/latest"),
+            ])
+            .output()
+            .context("failed to fetch latest release")?;
+        if !output.status.success() {
+            anyhow::bail!(
+                "could not fetch latest release — check your network or use --from-source"
+            );
+        }
+        let body = String::from_utf8_lossy(&output.stdout);
+        let tag = body
+            .lines()
+            .find(|l| l.contains("\"tag_name\""))
+            .and_then(|l| {
+                let rest = &l[l.find("tag_name")? + 8..];
+                let rest = &rest[rest.find('"')? + 1..];
+                let end = rest.find('"')?;
+                Some(rest[..end].to_string())
+            })
+            .ok_or_else(|| anyhow::anyhow!("could not parse latest version from GitHub API"))?;
+        tag
+    };
+
+    eprintln!(
+        "  {} target version: {}",
+        "·".dimmed(),
+        target_version.cyan(),
+    );
+
+    // Detect platform.
+    let os = if cfg!(target_os = "macos") {
+        "apple-darwin"
+    } else if cfg!(target_os = "linux") {
+        "unknown-linux-gnu"
+    } else {
+        anyhow::bail!("unsupported OS — use --from-source");
+    };
+
+    let arch = if cfg!(target_arch = "x86_64") {
+        "x86_64"
+    } else if cfg!(target_arch = "aarch64") {
+        "aarch64"
+    } else {
+        anyhow::bail!("unsupported architecture — use --from-source");
+    };
+
+    let platform = format!("{arch}-{os}");
+    let asset = format!("archon-{target_version}-{platform}.tar.gz");
+    let url = format!(
+        "https://github.com/{REPO}/releases/download/{target_version}/{asset}"
+    );
+
+    eprintln!("  {} Downloading {}...", "·".dimmed(), asset.dimmed());
+
+    let tmp_dir = std::env::temp_dir().join(format!("archon-update-{}", std::process::id()));
+    std::fs::create_dir_all(&tmp_dir)?;
+
+    let download_status = std::process::Command::new("curl")
+        .args(["-fsSL", &url, "-o"])
+        .arg(tmp_dir.join(&asset))
+        .status()
+        .context("failed to download release")?;
+
+    if !download_status.success() {
+        let _ = std::fs::remove_dir_all(&tmp_dir);
+        anyhow::bail!(
+            "download failed — binary may not exist for {platform}. Try --from-source"
+        );
+    }
+
+    // Extract.
+    let extract_status = std::process::Command::new("tar")
+        .args(["-xzf"])
+        .arg(tmp_dir.join(&asset))
+        .arg("-C")
+        .arg(&tmp_dir)
+        .status()
+        .context("failed to extract archive")?;
+
+    if !extract_status.success() {
+        let _ = std::fs::remove_dir_all(&tmp_dir);
+        anyhow::bail!("failed to extract archive");
+    }
+
+    // Replace current binary.
+    let new_binary = tmp_dir.join("archon");
+    if !new_binary.exists() {
+        let _ = std::fs::remove_dir_all(&tmp_dir);
+        anyhow::bail!("archive did not contain 'archon' binary");
+    }
+
+    let target_path = install_dir.join("archon");
+    std::fs::copy(&new_binary, &target_path)
+        .context("failed to replace binary — do you have write permission?")?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&target_path, std::fs::Permissions::from_mode(0o755))?;
+    }
+
+    let _ = std::fs::remove_dir_all(&tmp_dir);
+
+    eprintln!();
+    eprintln!(
+        "  {} Updated to {} at {}",
+        "✓".green().bold(),
+        target_version.cyan(),
+        target_path.display().to_string().dimmed(),
+    );
+    eprintln!();
+    Ok(())
 }

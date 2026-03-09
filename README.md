@@ -18,11 +18,37 @@ archon is a **tool**, not a library. No other repo depends on it at runtime. It 
 
 ## Install
 
+**One-liner** (downloads pre-built binary):
+
 ```bash
+curl -fsSL https://raw.githubusercontent.com/auser/archon/main/install.sh | bash
+```
+
+**Options:**
+
+```bash
+# Install a specific version
+curl -fsSL https://raw.githubusercontent.com/auser/archon/main/install.sh | bash -s -- --version v0.2.0
+
+# Build from source (requires Rust toolchain)
+curl -fsSL https://raw.githubusercontent.com/auser/archon/main/install.sh | bash -s -- --from-source
+
+# Custom install directory
+curl -fsSL https://raw.githubusercontent.com/auser/archon/main/install.sh | bash -s -- --install-dir /usr/local/bin
+
+# Or build directly from source
 cargo install --path .
 ```
 
-Requires Rust 2021 edition. AI features (`init`, `describe`, `assemble --bootstrap`) require the [`claude` CLI](https://claude.ai/claude-code) but all core graph operations work without it.
+**Update** an existing installation:
+
+```bash
+archon update                        # latest release
+archon update --version v0.3.0       # specific version
+archon update --from-source          # build from source
+```
+
+AI features (`init`, `describe`, `assemble --bootstrap`) require the [`claude` CLI](https://claude.ai/claude-code) but all core graph operations work without it.
 
 ## Quick start
 
@@ -260,6 +286,21 @@ archon describe --verbose "hologram-network depends on hologram and UOR-Framewor
 | `--verbose` | Show raw AI response for debugging |
 
 The command reads all existing manifests, sends your description to Claude, and applies inferred changes (role, description, depends_on, provides) to each repo's `archon.yaml`. If the described state already matches the current configuration, archon reports which repos are already up to date rather than a generic "no changes" message.
+
+### `archon update`
+
+Self-update archon to the latest version. Downloads a pre-built binary from GitHub releases, or builds from source with `--from-source`.
+
+```bash
+archon update                        # latest release binary
+archon update --version v0.3.0       # specific version
+archon update --from-source          # build from source via cargo install
+```
+
+| Flag | Description |
+|------|-------------|
+| `--version <TAG>` | Install a specific version (e.g. `v0.2.0`) |
+| `--from-source` | Build from source instead of downloading a binary |
 
 ### `archon dashboard`
 
