@@ -2656,10 +2656,10 @@ fn cmd_update(version: Option<&str>, from_source: bool) -> Result<()> {
             .lines()
             .find(|l| l.contains("\"tag_name\""))
             .and_then(|l| {
-                let rest = &l[l.find("tag_name")? + 8..];
-                let rest = &rest[rest.find('"')? + 1..];
-                let end = rest.find('"')?;
-                Some(rest[..end].to_string())
+                // Line looks like: "tag_name": "v0.3.3",
+                let after_colon = l.split(':').nth(1)?;
+                let trimmed = after_colon.trim().trim_matches(|c| c == '"' || c == ',');
+                if trimmed.is_empty() { None } else { Some(trimmed.to_string()) }
             })
             .ok_or_else(|| anyhow::anyhow!("could not parse latest version from GitHub API"))?;
         tag
