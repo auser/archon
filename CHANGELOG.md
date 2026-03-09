@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.1] - 2026-03-09
+
+### Bug Fixes
+
+- Make just release create GitHub release via gh CLI
+
 ## [0.3.0] - 2026-03-09
 
 ### Bug Fixes
