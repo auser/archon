@@ -22,7 +22,10 @@ use crate::inject::{empty_section_markers, has_managed_sections, replace_managed
 use crate::manifest::{CrateEntry, Manifest, Role, Rule};
 
 #[derive(Parser)]
-#[command(name = "archon", about = "Dependency graph and AI context generator for multi-repo ecosystems")]
+#[command(
+    name = "archon",
+    about = "Dependency graph and AI context generator for multi-repo ecosystems"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -217,7 +220,12 @@ fn main() {
     let cli = Cli::parse();
 
     let result = match cli.command {
-        Commands::Init { path, registry, owner, no_ai } => cmd_init(&path, registry.as_deref(), owner.as_deref(), no_ai),
+        Commands::Init {
+            path,
+            registry,
+            owner,
+            no_ai,
+        } => cmd_init(&path, registry.as_deref(), owner.as_deref(), no_ai),
         Commands::Scan { path, registry } => cmd_scan(&path, registry.as_deref()),
         Commands::Assemble {
             root,
@@ -239,10 +247,15 @@ fn main() {
             verbose,
         } => cmd_describe(&description.join(" "), &root, dry_run, verbose),
         Commands::Graph(sub) => cmd_graph(sub),
-        Commands::Update { version, from_source } => cmd_update(version.as_deref(), from_source),
-        Commands::Dashboard { root, registry, web } => {
-            dashboard::run_dashboard(&root, &registry, web)
-        }
+        Commands::Update {
+            version,
+            from_source,
+        } => cmd_update(version.as_deref(), from_source),
+        Commands::Dashboard {
+            root,
+            registry,
+            web,
+        } => dashboard::run_dashboard(&root, &registry, web),
     };
 
     if let Err(e) = result {
@@ -273,7 +286,11 @@ fn claude_prompt(prompt: &str) -> Option<String> {
         .ok()?;
     if output.status.success() {
         let text = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        if text.is_empty() { None } else { Some(text) }
+        if text.is_empty() {
+            None
+        } else {
+            Some(text)
+        }
     } else {
         None
     }
@@ -307,7 +324,13 @@ fn ai_suggest_init(
     let readme_snippet = if readme.exists() {
         std::fs::read_to_string(&readme)
             .ok()
-            .map(|c| if c.len() > 1500 { c[..1500].to_string() } else { c })
+            .map(|c| {
+                if c.len() > 1500 {
+                    c[..1500].to_string()
+                } else {
+                    c
+                }
+            })
             .unwrap_or_default()
     } else {
         String::new()
@@ -398,7 +421,11 @@ fn ai_suggest_bootstrap(
     let repo_list: String = entries
         .iter()
         .map(|(name, cargo)| {
-            let snippet = if cargo.len() > 500 { &cargo[..500] } else { cargo.as_str() };
+            let snippet = if cargo.len() > 500 {
+                &cargo[..500]
+            } else {
+                cargo.as_str()
+            };
             format!("### {name}\n```toml\n{snippet}\n```")
         })
         .collect::<Vec<_>>()
@@ -467,7 +494,12 @@ Respond with ONLY the table lines, no headers or extra text."#,
 
 // ── Commands ────────────────────────────────────────────────────────────────
 
-fn cmd_init(path: &Path, registry_path: Option<&Path>, owner_arg: Option<&str>, no_ai: bool) -> Result<()> {
+fn cmd_init(
+    path: &Path,
+    registry_path: Option<&Path>,
+    owner_arg: Option<&str>,
+    no_ai: bool,
+) -> Result<()> {
     let manifest_path = Manifest::manifest_path(path);
     if manifest_path.exists() {
         anyhow::bail!("{} already exists", manifest_path.display());
@@ -478,21 +510,30 @@ fn cmd_init(path: &Path, registry_path: Option<&Path>, owner_arg: Option<&str>, 
     // ── Banner ──
     eprintln!();
     eprintln!();
-    eprintln!("  {} — {}", "archon init".cyan().bold(), "Repository onboarding wizard");
+    eprintln!(
+        "  {} — Repository onboarding wizard",
+        "archon init".cyan().bold()
+    );
     eprintln!();
 
     // ── Step 1: Registry discovery ──
-    eprintln!("  {} {}", "[1/5]".blue().bold(), "Ecosystem discovery".bold());
+    eprintln!(
+        "  {} {}",
+        "[1/5]".blue().bold(),
+        "Ecosystem discovery".bold()
+    );
 
     // Try to find sibling repos for contract discovery.
-    let registry_dir = registry_path
-        .map(|p| p.to_path_buf())
-        .or_else(|| {
-            // Auto-detect: look for archon-registry as sibling.
-            let parent = path.canonicalize().ok()?.parent()?.to_path_buf();
-            let reg = parent.join("archon-registry");
-            if reg.exists() { Some(reg) } else { None }
-        });
+    let registry_dir = registry_path.map(|p| p.to_path_buf()).or_else(|| {
+        // Auto-detect: look for archon-registry as sibling.
+        let parent = path.canonicalize().ok()?.parent()?.to_path_buf();
+        let reg = parent.join("archon-registry");
+        if reg.exists() {
+            Some(reg)
+        } else {
+            None
+        }
+    });
 
     // Collect sibling manifests for ecosystem awareness.
     let sibling_manifests = if let Some(ref reg) = registry_dir {
@@ -557,17 +598,23 @@ fn cmd_init(path: &Path, registry_path: Option<&Path>, owner_arg: Option<&str>, 
     // ── AI inference ──
     let use_ai = !no_ai && has_claude_cli();
     let ai_suggestion = if use_ai {
-        eprintln!(
-            "  {} Analyzing repo with AI...",
-            "🤖".to_string().cyan()
+        eprintln!("  {} Analyzing repo with AI...", "🤖".to_string().cyan());
+        let suggestion = ai_suggest_init(
+            path,
+            &default_name,
+            cargo_content.as_deref(),
+            &sibling_names,
         );
-        let suggestion = ai_suggest_init(path, &default_name, cargo_content.as_deref(), &sibling_names);
         if let Some(ref s) = suggestion {
             eprintln!(
                 "  {} AI suggests: {} ({}){}",
                 "✓".green().bold(),
                 s.description.as_deref().unwrap_or("—").dimmed(),
-                s.role.as_ref().map(|r| format!("{r}")).unwrap_or_else(|| "?".into()).bold(),
+                s.role
+                    .as_ref()
+                    .map(|r| format!("{r}"))
+                    .unwrap_or_else(|| "?".into())
+                    .bold(),
                 if s.depends_on.is_empty() {
                     String::new()
                 } else {
@@ -575,10 +622,7 @@ fn cmd_init(path: &Path, registry_path: Option<&Path>, owner_arg: Option<&str>, 
                 },
             );
         } else {
-            eprintln!(
-                "  {} AI inference returned no results",
-                "⚠".yellow()
-            );
+            eprintln!("  {} AI inference returned no results", "⚠".yellow());
         }
         suggestion
     } else {
@@ -590,7 +634,11 @@ fn cmd_init(path: &Path, registry_path: Option<&Path>, owner_arg: Option<&str>, 
     eprintln!();
 
     // ── Step 2: Repo identity ──
-    eprintln!("  {} {}", "[2/5]".blue().bold(), "Repository identity".bold());
+    eprintln!(
+        "  {} {}",
+        "[2/5]".blue().bold(),
+        "Repository identity".bold()
+    );
 
     let default_description = ai_suggestion
         .as_ref()
@@ -680,7 +728,7 @@ fn cmd_init(path: &Path, registry_path: Option<&Path>, owner_arg: Option<&str>, 
                     .map(|b| {
                         b.crates
                             .iter()
-                            .map(|c| render::summarize_crate_surface(c))
+                            .map(render::summarize_crate_surface)
                             .collect::<Vec<_>>()
                             .join("; ")
                     })
@@ -688,7 +736,10 @@ fn cmd_init(path: &Path, registry_path: Option<&Path>, owner_arg: Option<&str>, 
                 if api_summary.is_empty() {
                     format!("{} ({}) — {}", m.name, m.role, m.description)
                 } else {
-                    format!("{} ({}) — {} [{}]", m.name, m.role, m.description, api_summary)
+                    format!(
+                        "{} ({}) — {} [{}]",
+                        m.name, m.role, m.description, api_summary
+                    )
                 }
             })
             .collect();
@@ -701,7 +752,11 @@ fn cmd_init(path: &Path, registry_path: Option<&Path>, owner_arg: Option<&str>, 
             .map(|(i, _)| i)
             .collect();
 
-        let prompt_label = format!("  {} Which repos does {} depend on?", "▸".cyan(), name.bold());
+        let prompt_label = format!(
+            "  {} Which repos does {} depend on?",
+            "▸".cyan(),
+            name.bold()
+        );
         eprintln!();
         let mut multi = inquire::MultiSelect::new(&prompt_label, dep_options)
             .with_help_message("Space to select, Enter to confirm");
@@ -718,9 +773,10 @@ fn cmd_init(path: &Path, registry_path: Option<&Path>, owner_arg: Option<&str>, 
             .collect()
     } else if is_interactive {
         let default_deps = ai_deps.join(", ");
-        let deps_str = inquire::Text::new(
-            &format!("  {} Dependencies (comma-separated, or empty):", "▸".cyan()),
-        )
+        let deps_str = inquire::Text::new(&format!(
+            "  {} Dependencies (comma-separated, or empty):",
+            "▸".cyan()
+        ))
         .with_default(&default_deps)
         .prompt()?;
         deps_str
@@ -748,7 +804,8 @@ fn cmd_init(path: &Path, registry_path: Option<&Path>, owner_arg: Option<&str>, 
     eprintln!(
         "  {} {}",
         "·".dimmed(),
-        "Named contracts other repos can depend on (e.g. \"execution-plan\", \"sandbox-runtime\").".dimmed()
+        "Named contracts other repos can depend on (e.g. \"execution-plan\", \"sandbox-runtime\")."
+            .dimmed()
     );
     eprintln!(
         "  {} {}",
@@ -767,11 +824,14 @@ fn cmd_init(path: &Path, registry_path: Option<&Path>, owner_arg: Option<&str>, 
                 auto_contracts.join(", ")
             );
         }
-        let provides_str = inquire::Text::new(
-            &format!("  {} Contracts this repo provides (comma-separated, or empty):", "▸".cyan()),
-        )
+        let provides_str = inquire::Text::new(&format!(
+            "  {} Contracts this repo provides (comma-separated, or empty):",
+            "▸".cyan()
+        ))
         .with_default(&auto_contracts.join(", "))
-        .with_help_message("Stable API contracts that downstream repos can depend on. Leave empty if none.")
+        .with_help_message(
+            "Stable API contracts that downstream repos can depend on. Leave empty if none.",
+        )
         .prompt()?;
         provides_str
             .split(',')
@@ -783,29 +843,27 @@ fn cmd_init(path: &Path, registry_path: Option<&Path>, owner_arg: Option<&str>, 
     };
 
     if provides.is_empty() {
-        eprintln!("  {} No contracts declared — this repo consumes but doesn't provide named APIs", "·".dimmed());
-    } else {
         eprintln!(
-            "  {} provides: {}",
-            "✓".green().bold(),
-            provides.join(", ")
+            "  {} No contracts declared — this repo consumes but doesn't provide named APIs",
+            "·".dimmed()
         );
+    } else {
+        eprintln!("  {} provides: {}", "✓".green().bold(), provides.join(", "));
     }
     eprintln!();
 
     // ── Step 5: Crate classification (automatic) ──
-    eprintln!("  {} {}", "[5/5]".blue().bold(), "Crate classification".bold());
+    eprintln!(
+        "  {} {}",
+        "[5/5]".blue().bold(),
+        "Crate classification".bold()
+    );
 
     let crates = detect_workspace_crates(path);
     if let Some(ref entries) = crates {
         for entry in entries {
             let class = if entry.public { "public" } else { "internal" };
-            eprintln!(
-                "  {} {:<30} → {}",
-                "✓".green().bold(),
-                entry.name,
-                class
-            );
+            eprintln!("  {} {:<30} → {}", "✓".green().bold(), entry.name, class);
         }
         eprintln!(
             "  {} crate(s) classified ({} public)",
@@ -813,7 +871,10 @@ fn cmd_init(path: &Path, registry_path: Option<&Path>, owner_arg: Option<&str>, 
             entries.iter().filter(|c| c.public).count()
         );
     } else {
-        eprintln!("  {} No Cargo.toml found — skipping crate classification", "·".dimmed());
+        eprintln!(
+            "  {} No Cargo.toml found — skipping crate classification",
+            "·".dimmed()
+        );
     }
     eprintln!();
 
@@ -852,13 +913,35 @@ fn cmd_init(path: &Path, registry_path: Option<&Path>, owner_arg: Option<&str>, 
     }
     // ── Summary card ──
     eprintln!();
-    eprintln!("  {}", "─── Summary ──────────────────────────────".dimmed());
+    eprintln!(
+        "  {}",
+        "─── Summary ──────────────────────────────".dimmed()
+    );
     eprintln!("  {} {}", "Name:".dimmed(), name.bold().cyan());
     eprintln!("  {} {}", "Desc:".dimmed(), description.dimmed());
     eprintln!("  {} {}", "Role:".dimmed(), format!("{role}").bold());
-    eprintln!("  {} {}", "Deps:".dimmed(), if depends_on.is_empty() { "(none)".dimmed().to_string() } else { depends_on.join(", ") });
-    eprintln!("  {} {}", "Provides:".dimmed(), if provides.is_empty() { "(none)".dimmed().to_string() } else { provides.join(", ") });
-    eprintln!("  {}", "───────────────────────────────────────────".dimmed());
+    eprintln!(
+        "  {} {}",
+        "Deps:".dimmed(),
+        if depends_on.is_empty() {
+            "(none)".dimmed().to_string()
+        } else {
+            depends_on.join(", ")
+        }
+    );
+    eprintln!(
+        "  {} {}",
+        "Provides:".dimmed(),
+        if provides.is_empty() {
+            "(none)".dimmed().to_string()
+        } else {
+            provides.join(", ")
+        }
+    );
+    eprintln!(
+        "  {}",
+        "───────────────────────────────────────────".dimmed()
+    );
     eprintln!();
 
     eprintln!(
@@ -878,12 +961,29 @@ fn cmd_init(path: &Path, registry_path: Option<&Path>, owner_arg: Option<&str>, 
 
     eprintln!();
     eprintln!("  {}", "Next steps:".bold());
-    eprintln!("    {} {}  — extract public API and generate context", "archon".cyan(), "scan".bold());
-    eprintln!("    {} {} — run conformance rules", "archon".cyan(), "verify".bold());
+    eprintln!(
+        "    {} {}  — extract public API and generate context",
+        "archon".cyan(),
+        "scan".bold()
+    );
+    eprintln!(
+        "    {} {} — run conformance rules",
+        "archon".cyan(),
+        "verify".bold()
+    );
     if registry_dir.is_some() {
-        eprintln!("    {} {} — rebuild the ecosystem graph", "archon".cyan(), "assemble".bold());
+        eprintln!(
+            "    {} {} — rebuild the ecosystem graph",
+            "archon".cyan(),
+            "assemble".bold()
+        );
     } else {
-        eprintln!("    {} {} — rebuild the ecosystem graph (needs {})", "archon".cyan(), "assemble".bold(), "--registry".dimmed());
+        eprintln!(
+            "    {} {} — rebuild the ecosystem graph (needs {})",
+            "archon".cyan(),
+            "assemble".bold(),
+            "--registry".dimmed()
+        );
     }
     eprintln!();
 
@@ -899,9 +999,8 @@ fn cmd_describe(description: &str, root: &Path, dry_run: bool, verbose: bool) ->
 
     eprintln!();
     eprintln!(
-        "  {} — {}",
-        "archon describe".cyan().bold(),
-        "Natural language ecosystem configuration"
+        "  {} — Natural language ecosystem configuration",
+        "archon describe".cyan().bold()
     );
     eprintln!();
 
@@ -936,8 +1035,7 @@ fn cmd_describe(description: &str, root: &Path, dry_run: bool, verbose: bool) ->
                 && !path.join("archon.yaml").exists()
             {
                 let cargo = std::fs::read_to_string(path.join("Cargo.toml")).unwrap_or_default();
-                let name =
-                    extract_cargo_name(&cargo).unwrap_or_else(|| dir_name(&path));
+                let name = extract_cargo_name(&cargo).unwrap_or_else(|| dir_name(&path));
                 uninitialized.push(name);
             }
         }
@@ -955,11 +1053,7 @@ fn cmd_describe(description: &str, root: &Path, dry_run: bool, verbose: bool) ->
         existing.len(),
         uninitialized.len(),
     );
-    eprintln!(
-        "  {} \"{}\"",
-        "▸".cyan(),
-        description.dimmed()
-    );
+    eprintln!("  {} \"{}\"", "▸".cyan(), description.dimmed());
     eprintln!();
 
     let prompt = format!(
@@ -1000,10 +1094,7 @@ Rules:
 - If the user's description doesn't mention a repo, don't include it"#
     );
 
-    eprintln!(
-        "  {} Thinking...",
-        "🤖".to_string().cyan()
-    );
+    eprintln!("  {} Thinking...", "🤖".to_string().cyan());
 
     let response = claude_prompt(&prompt)
         .ok_or_else(|| anyhow::anyhow!("AI inference failed — claude returned no response"))?;
@@ -1030,16 +1121,20 @@ Rules:
     let parsed: serde_yaml::Value =
         serde_yaml::from_str(&yaml_str).context("failed to parse AI response as YAML")?;
 
-    let repos = parsed
-        .get("repos")
-        .and_then(|r| r.as_sequence());
+    let repos = parsed.get("repos").and_then(|r| r.as_sequence());
 
     let repos = match repos {
         Some(r) if !r.is_empty() => r,
         _ => {
             eprintln!();
-            eprintln!("  {}", "─── Changes ──────────────────────────────".dimmed());
-            eprintln!("  {}", "───────────────────────────────────────────".dimmed());
+            eprintln!(
+                "  {}",
+                "─── Changes ──────────────────────────────".dimmed()
+            );
+            eprintln!(
+                "  {}",
+                "───────────────────────────────────────────".dimmed()
+            );
             eprintln!();
             eprintln!(
                 "  {} The described state already matches the current configuration",
@@ -1052,7 +1147,10 @@ Rules:
 
     // Apply updates.
     eprintln!();
-    eprintln!("  {}", "─── Changes ──────────────────────────────".dimmed());
+    eprintln!(
+        "  {}",
+        "─── Changes ──────────────────────────────".dimmed()
+    );
 
     let mut updates = 0u32;
     let mut creates = 0u32;
@@ -1169,7 +1267,11 @@ Rules:
                 .and_then(|v| v.as_str())
                 .unwrap_or("TODO")
                 .to_string();
-            let role = match repo_value.get("role").and_then(|v| v.as_str()).unwrap_or("library") {
+            let role = match repo_value
+                .get("role")
+                .and_then(|v| v.as_str())
+                .unwrap_or("library")
+            {
                 "core" => Role::Core,
                 "extension" => Role::Extension,
                 "tool" => Role::Tool,
@@ -1249,7 +1351,10 @@ Rules:
         }
     }
 
-    eprintln!("  {}", "───────────────────────────────────────────".dimmed());
+    eprintln!(
+        "  {}",
+        "───────────────────────────────────────────".dimmed()
+    );
     eprintln!();
 
     if updates == 0 && creates == 0 {
@@ -1279,10 +1384,7 @@ Rules:
 
     if dry_run {
         eprintln!();
-        eprintln!(
-            "  Run without {} to apply changes.",
-            "--dry-run".bold()
-        );
+        eprintln!("  Run without {} to apply changes.", "--dry-run".bold());
     }
 
     eprintln!();
@@ -1423,13 +1525,22 @@ fn cmd_scan(path: &Path, registry: Option<&Path>) -> Result<()> {
         broadcasts.insert(manifest.name.clone(), broadcast);
         let ctx = generate_context(&node, &graph, &broadcasts);
         inject_context(path, &ctx)?;
-        println!("{} Wrote .archon/context.md (standalone — run assemble for full graph)", "ok:".green().bold());
+        println!(
+            "{} Wrote .archon/context.md (standalone — run assemble for full graph)",
+            "ok:".green().bold()
+        );
     }
 
     Ok(())
 }
 
-fn cmd_assemble(root: &Path, registry: &Path, distribute: bool, bootstrap: bool, no_ai: bool) -> Result<()> {
+fn cmd_assemble(
+    root: &Path,
+    registry: &Path,
+    distribute: bool,
+    bootstrap: bool,
+    no_ai: bool,
+) -> Result<()> {
     if bootstrap {
         bootstrap_siblings(root, no_ai)?;
     }
@@ -1492,7 +1603,9 @@ fn cmd_assemble(root: &Path, registry: &Path, distribute: bool, bootstrap: bool,
                 let ctx = generate_context(node, &graph, &broadcasts);
                 match inject_context(repo_path, &ctx) {
                     Ok(true) => println!("  {} {}", "updated:".green(), manifest.name),
-                    Ok(false) => println!("  {} {} (no markers)", "skipped:".yellow(), manifest.name),
+                    Ok(false) => {
+                        println!("  {} {} (no markers)", "skipped:".yellow(), manifest.name)
+                    }
                     Err(e) => eprintln!("  {} {}: {}", "error:".red(), manifest.name, e),
                 }
             }
@@ -1574,7 +1687,11 @@ fn cmd_verify(path: &Path, format: &OutputFormat) -> Result<()> {
         return Ok(());
     }
 
-    println!("Verifying {} ({} rules)...", manifest.name.bold(), manifest.rules.len());
+    println!(
+        "Verifying {} ({} rules)...",
+        manifest.name.bold(),
+        manifest.rules.len()
+    );
 
     let mut failures = Vec::new();
 
@@ -1595,7 +1712,12 @@ fn cmd_verify(path: &Path, format: &OutputFormat) -> Result<()> {
             println!("{}", "FAIL".red().bold());
             let stderr = String::from_utf8_lossy(&output.stderr);
             let stdout = String::from_utf8_lossy(&output.stdout);
-            failures.push((rule.id.clone(), desc.to_string(), stdout.to_string(), stderr.to_string()));
+            failures.push((
+                rule.id.clone(),
+                desc.to_string(),
+                stdout.to_string(),
+                stderr.to_string(),
+            ));
         }
     }
 
@@ -1613,11 +1735,13 @@ fn cmd_verify(path: &Path, format: &OutputFormat) -> Result<()> {
                 for (id, desc, stdout, stderr) in &failures {
                     eprintln!("{} {} ({})", "FAIL:".red().bold(), desc, id);
                     if !stdout.is_empty() {
-                        let truncated: String = stdout.lines().take(20).collect::<Vec<_>>().join("\n");
+                        let truncated: String =
+                            stdout.lines().take(20).collect::<Vec<_>>().join("\n");
                         eprintln!("{}", truncated);
                     }
                     if !stderr.is_empty() {
-                        let truncated: String = stderr.lines().take(20).collect::<Vec<_>>().join("\n");
+                        let truncated: String =
+                            stderr.lines().take(20).collect::<Vec<_>>().join("\n");
                         eprintln!("{}", truncated);
                     }
                 }
@@ -1681,30 +1805,54 @@ fn load_or_assemble_graph(graph_path: Option<&Path>, root: &Path) -> Result<Grap
 
 fn cmd_graph(sub: GraphCommands) -> Result<()> {
     match sub {
-        GraphCommands::Show { graph, root, format, role } => {
-            cmd_graph_show(graph.as_deref(), &root, &format, role.as_deref())
-        }
-        GraphCommands::Info { name, graph, root, format } => {
-            cmd_graph_info(&name, graph.as_deref(), &root, &format)
-        }
-        GraphCommands::Deps { name, graph, root, direct } => {
-            cmd_graph_deps(&name, graph.as_deref(), &root, direct)
-        }
-        GraphCommands::Rdeps { name, graph, root, direct } => {
-            cmd_graph_rdeps(&name, graph.as_deref(), &root, direct)
-        }
-        GraphCommands::Path { from, to, graph, root } => {
-            cmd_graph_path(&from, &to, graph.as_deref(), &root)
-        }
+        GraphCommands::Show {
+            graph,
+            root,
+            format,
+            role,
+        } => cmd_graph_show(graph.as_deref(), &root, &format, role.as_deref()),
+        GraphCommands::Info {
+            name,
+            graph,
+            root,
+            format,
+        } => cmd_graph_info(&name, graph.as_deref(), &root, &format),
+        GraphCommands::Deps {
+            name,
+            graph,
+            root,
+            direct,
+        } => cmd_graph_deps(&name, graph.as_deref(), &root, direct),
+        GraphCommands::Rdeps {
+            name,
+            graph,
+            root,
+            direct,
+        } => cmd_graph_rdeps(&name, graph.as_deref(), &root, direct),
+        GraphCommands::Path {
+            from,
+            to,
+            graph,
+            root,
+        } => cmd_graph_path(&from, &to, graph.as_deref(), &root),
     }
 }
 
-fn cmd_graph_show(graph_path: Option<&Path>, root: &Path, format: &OutputFormat, role_filter: Option<&str>) -> Result<()> {
+fn cmd_graph_show(
+    graph_path: Option<&Path>,
+    root: &Path,
+    format: &OutputFormat,
+    role_filter: Option<&str>,
+) -> Result<()> {
     let graph = load_or_assemble_graph(graph_path, root)?;
 
     let nodes: Vec<&graph::GraphNode> = if let Some(role_str) = role_filter {
         let role_str = role_str.to_lowercase();
-        graph.nodes.iter().filter(|n| n.role.to_string() == role_str).collect()
+        graph
+            .nodes
+            .iter()
+            .filter(|n| n.role.to_string() == role_str)
+            .collect()
     } else {
         graph.nodes.iter().collect()
     };
@@ -1749,16 +1897,19 @@ fn cmd_graph_show(graph_path: Option<&Path>, root: &Path, format: &OutputFormat,
             }
         }
         OutputFormat::Json => {
-            let output: Vec<_> = nodes.iter().map(|n| {
-                serde_json::json!({
-                    "name": n.name,
-                    "description": n.description,
-                    "role": n.role.to_string(),
-                    "depends_on": n.depends_on,
-                    "provides": n.provides,
-                    "dependents": n.dependents,
+            let output: Vec<_> = nodes
+                .iter()
+                .map(|n| {
+                    serde_json::json!({
+                        "name": n.name,
+                        "description": n.description,
+                        "role": n.role.to_string(),
+                        "depends_on": n.depends_on,
+                        "provides": n.provides,
+                        "dependents": n.dependents,
+                    })
                 })
-            }).collect();
+                .collect();
             println!("{}", serde_json::to_string_pretty(&output)?);
         }
     }
@@ -1766,9 +1917,15 @@ fn cmd_graph_show(graph_path: Option<&Path>, root: &Path, format: &OutputFormat,
     Ok(())
 }
 
-fn cmd_graph_info(name: &str, graph_path: Option<&Path>, root: &Path, format: &OutputFormat) -> Result<()> {
+fn cmd_graph_info(
+    name: &str,
+    graph_path: Option<&Path>,
+    root: &Path,
+    format: &OutputFormat,
+) -> Result<()> {
     let graph = load_or_assemble_graph(graph_path, root)?;
-    let node = graph.find_node(name)
+    let node = graph
+        .find_node(name)
         .ok_or_else(|| anyhow::anyhow!("repo '{}' not found in graph", name))?;
 
     match format {
@@ -1790,7 +1947,12 @@ fn cmd_graph_info(name: &str, graph_path: Option<&Path>, root: &Path, format: &O
                 for dep in &node.depends_on {
                     let dep_node = graph.find_node(dep);
                     let desc = dep_node.map(|n| n.description.as_str()).unwrap_or("?");
-                    println!("    {} {} {}", "→".green(), dep.bold(), format!("({})", desc).dimmed());
+                    println!(
+                        "    {} {} {}",
+                        "→".green(),
+                        dep.bold(),
+                        format!("({})", desc).dimmed()
+                    );
                 }
             }
 
@@ -1803,19 +1965,29 @@ fn cmd_graph_info(name: &str, graph_path: Option<&Path>, root: &Path, format: &O
                 for dep in &node.dependents {
                     let dep_node = graph.find_node(dep);
                     let desc = dep_node.map(|n| n.description.as_str()).unwrap_or("?");
-                    println!("    {} {} {}", "←".yellow(), dep.bold(), format!("({})", desc).dimmed());
+                    println!(
+                        "    {} {} {}",
+                        "←".yellow(),
+                        dep.bold(),
+                        format!("({})", desc).dimmed()
+                    );
                 }
             }
 
             // Transitive stats.
             let trans_deps = graph.transitive_deps(name);
             let trans_rdeps = graph.transitive_rdeps(name);
-            if trans_deps.len() != node.depends_on.len() || trans_rdeps.len() != node.dependents.len() {
+            if trans_deps.len() != node.depends_on.len()
+                || trans_rdeps.len() != node.dependents.len()
+            {
                 println!();
-                println!("  {} {} direct deps, {} transitive | {} direct dependents, {} transitive",
+                println!(
+                    "  {} {} direct deps, {} transitive | {} direct dependents, {} transitive",
                     "·".dimmed(),
-                    node.depends_on.len(), trans_deps.len(),
-                    node.dependents.len(), trans_rdeps.len(),
+                    node.depends_on.len(),
+                    trans_deps.len(),
+                    node.dependents.len(),
+                    trans_rdeps.len(),
                 );
             }
         }
@@ -1841,14 +2013,19 @@ fn cmd_graph_info(name: &str, graph_path: Option<&Path>, root: &Path, format: &O
 
 fn cmd_graph_deps(name: &str, graph_path: Option<&Path>, root: &Path, direct: bool) -> Result<()> {
     let graph = load_or_assemble_graph(graph_path, root)?;
-    let node = graph.find_node(name)
+    let node = graph
+        .find_node(name)
         .ok_or_else(|| anyhow::anyhow!("repo '{}' not found in graph", name))?;
 
     if direct {
         if node.depends_on.is_empty() {
             println!("{} has no dependencies", name.bold());
         } else {
-            println!("{} depends on ({} direct):", name.bold(), node.depends_on.len());
+            println!(
+                "{} depends on ({} direct):",
+                name.bold(),
+                node.depends_on.len()
+            );
             for dep in &node.depends_on {
                 println!("  {} {}", "→".green(), dep);
             }
@@ -1858,9 +2035,18 @@ fn cmd_graph_deps(name: &str, graph_path: Option<&Path>, root: &Path, direct: bo
         if deps.is_empty() {
             println!("{} has no dependencies", name.bold());
         } else {
-            println!("{} depends on ({} transitive, {} direct):", name.bold(), deps.len(), node.depends_on.len());
+            println!(
+                "{} depends on ({} transitive, {} direct):",
+                name.bold(),
+                deps.len(),
+                node.depends_on.len()
+            );
             for dep in &deps {
-                let marker = if node.depends_on.contains(dep) { "→" } else { "⤷" };
+                let marker = if node.depends_on.contains(dep) {
+                    "→"
+                } else {
+                    "⤷"
+                };
                 let label = if node.depends_on.contains(dep) {
                     "".to_string()
                 } else {
@@ -1876,14 +2062,19 @@ fn cmd_graph_deps(name: &str, graph_path: Option<&Path>, root: &Path, direct: bo
 
 fn cmd_graph_rdeps(name: &str, graph_path: Option<&Path>, root: &Path, direct: bool) -> Result<()> {
     let graph = load_or_assemble_graph(graph_path, root)?;
-    let node = graph.find_node(name)
+    let node = graph
+        .find_node(name)
         .ok_or_else(|| anyhow::anyhow!("repo '{}' not found in graph", name))?;
 
     if direct {
         if node.dependents.is_empty() {
             println!("nothing depends on {}", name.bold());
         } else {
-            println!("{} is depended on by ({} direct):", name.bold(), node.dependents.len());
+            println!(
+                "{} is depended on by ({} direct):",
+                name.bold(),
+                node.dependents.len()
+            );
             for dep in &node.dependents {
                 println!("  {} {}", "←".yellow(), dep);
             }
@@ -1893,10 +2084,23 @@ fn cmd_graph_rdeps(name: &str, graph_path: Option<&Path>, root: &Path, direct: b
         if rdeps.is_empty() {
             println!("nothing depends on {}", name.bold());
         } else {
-            println!("{} is depended on by ({} transitive, {} direct):", name.bold(), rdeps.len(), node.dependents.len());
-            println!("  {} changing {} may impact these repos:", "⚠".yellow(), name.bold());
+            println!(
+                "{} is depended on by ({} transitive, {} direct):",
+                name.bold(),
+                rdeps.len(),
+                node.dependents.len()
+            );
+            println!(
+                "  {} changing {} may impact these repos:",
+                "⚠".yellow(),
+                name.bold()
+            );
             for dep in &rdeps {
-                let marker = if node.dependents.contains(dep) { "←" } else { "⤷" };
+                let marker = if node.dependents.contains(dep) {
+                    "←"
+                } else {
+                    "⤷"
+                };
                 let label = if node.dependents.contains(dep) {
                     "".to_string()
                 } else {
@@ -1914,9 +2118,11 @@ fn cmd_graph_path(from: &str, to: &str, graph_path: Option<&Path>, root: &Path) 
     let graph = load_or_assemble_graph(graph_path, root)?;
 
     // Verify both nodes exist.
-    graph.find_node(from)
+    graph
+        .find_node(from)
         .ok_or_else(|| anyhow::anyhow!("repo '{}' not found in graph", from))?;
-    graph.find_node(to)
+    graph
+        .find_node(to)
         .ok_or_else(|| anyhow::anyhow!("repo '{}' not found in graph", to))?;
 
     match graph.find_path(from, to) {
@@ -1927,7 +2133,9 @@ fn cmd_graph_path(from: &str, to: &str, graph_path: Option<&Path>, root: &Path) 
                     println!("    {} depends on", "↓".green());
                 }
                 let info = graph.find_node(node);
-                let desc = info.map(|n| format!(" ({})", n.description)).unwrap_or_default();
+                let desc = info
+                    .map(|n| format!(" ({})", n.description))
+                    .unwrap_or_default();
                 println!("  {}{}", node.bold(), desc.dimmed());
             }
             println!("\n  {} {} hops", "·".dimmed(), path.len() - 1);
@@ -1940,7 +2148,9 @@ fn cmd_graph_path(from: &str, to: &str, graph_path: Option<&Path>, root: &Path) 
                 println!(
                     "\n  {} a reverse path exists ({} {} {})",
                     "hint:".yellow(),
-                    to, "→".green(), from,
+                    to,
+                    "→".green(),
+                    from,
                 );
                 println!("  {} try: archon graph path {} {}", "·".dimmed(), to, from);
                 let _ = rev; // suppress unused warning
@@ -2045,10 +2255,10 @@ fn dir_name(path: &Path) -> String {
 fn extract_cargo_field(content: &str, field: &str) -> Option<String> {
     for line in content.lines() {
         let trimmed = line.trim();
-        if trimmed.starts_with(field) {
-            let rest = trimmed[field.len()..].trim();
-            if rest.starts_with('=') {
-                let val = rest[1..].trim().trim_matches('"');
+        if let Some(after_field) = trimmed.strip_prefix(field) {
+            let rest = after_field.trim();
+            if let Some(after_eq) = rest.strip_prefix('=') {
+                let val = after_eq.trim().trim_matches('"');
                 if !val.is_empty() {
                     return Some(val.to_string());
                 }
@@ -2078,10 +2288,7 @@ fn detect_workspace_crates(path: &Path) -> Option<Vec<CrateEntry>> {
     if !content.contains("[workspace]") {
         // Single crate — use the crate name.
         let name = extract_cargo_name(&content)?;
-        return Some(vec![CrateEntry {
-            name,
-            public: true,
-        }]);
+        return Some(vec![CrateEntry { name, public: true }]);
     }
 
     // Parse workspace members — handles both inline and multi-line arrays.
@@ -2102,13 +2309,8 @@ fn detect_workspace_crates(path: &Path) -> Option<Vec<CrateEntry>> {
                             let name = std::fs::read_to_string(&crate_name)
                                 .ok()
                                 .and_then(|c| extract_cargo_name(&c))
-                                .unwrap_or_else(|| {
-                                    entry.file_name().to_string_lossy().to_string()
-                                });
-                            crates.push(CrateEntry {
-                                name,
-                                public: true,
-                            });
+                                .unwrap_or_else(|| entry.file_name().to_string_lossy().to_string());
+                            crates.push(CrateEntry { name, public: true });
                         }
                     }
                 }
@@ -2124,10 +2326,7 @@ fn detect_workspace_crates(path: &Path) -> Option<Vec<CrateEntry>> {
             } else {
                 member.split('/').next_back().unwrap_or(member).to_string()
             };
-            crates.push(CrateEntry {
-                name,
-                public: true,
-            });
+            crates.push(CrateEntry { name, public: true });
         }
     }
 
@@ -2301,9 +2500,7 @@ fn bootstrap_siblings(root: &Path, no_ai: bool) -> Result<()> {
             }
         };
 
-        let depends_on = ai_entry
-            .map(|ai| ai.depends_on.clone())
-            .unwrap_or_default();
+        let depends_on = ai_entry.map(|ai| ai.depends_on.clone()).unwrap_or_default();
 
         let manifest = Manifest {
             name: repo.name.clone(),
@@ -2397,15 +2594,14 @@ fn cmd_update(version: Option<&str>, from_source: bool) -> Result<()> {
 
     eprintln!();
     eprintln!(
-        "  {} — {}",
-        "archon update".cyan().bold(),
-        "Self-update to latest version"
+        "  {} — Self-update to latest version",
+        "archon update".cyan().bold()
     );
     eprintln!();
 
     // Determine current binary location.
-    let current_exe = std::env::current_exe()
-        .context("could not determine current executable path")?;
+    let current_exe =
+        std::env::current_exe().context("could not determine current executable path")?;
     let install_dir = current_exe
         .parent()
         .ok_or_else(|| anyhow::anyhow!("could not determine install directory"))?;
@@ -2419,7 +2615,11 @@ fn cmd_update(version: Option<&str>, from_source: bool) -> Result<()> {
     if from_source {
         eprintln!("  {} Building from source...", "·".dimmed());
         let mut cmd = std::process::Command::new("cargo");
-        cmd.args(["install", "--git", &format!("https://github.com/{REPO}.git")]);
+        cmd.args([
+            "install",
+            "--git",
+            &format!("https://github.com/{REPO}.git"),
+        ]);
         if let Some(v) = version {
             cmd.args(["--tag", v]);
         }
@@ -2490,9 +2690,7 @@ fn cmd_update(version: Option<&str>, from_source: bool) -> Result<()> {
 
     let platform = format!("{arch}-{os}");
     let asset = format!("archon-{target_version}-{platform}.tar.gz");
-    let url = format!(
-        "https://github.com/{REPO}/releases/download/{target_version}/{asset}"
-    );
+    let url = format!("https://github.com/{REPO}/releases/download/{target_version}/{asset}");
 
     eprintln!("  {} Downloading {}...", "·".dimmed(), asset.dimmed());
 
@@ -2507,9 +2705,7 @@ fn cmd_update(version: Option<&str>, from_source: bool) -> Result<()> {
 
     if !download_status.success() {
         let _ = std::fs::remove_dir_all(&tmp_dir);
-        anyhow::bail!(
-            "download failed — binary may not exist for {platform}. Try --from-source"
-        );
+        anyhow::bail!("download failed — binary may not exist for {platform}. Try --from-source");
     }
 
     // Extract.
