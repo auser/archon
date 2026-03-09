@@ -47,25 +47,49 @@ sync *flags:
 describe *args:
     cargo run -- describe {{args}}
 
-# ─── Release (requires git-cliff) ───────────────────────────────────────────
+# ─── Release (requires git-cliff + gh CLI) ─────────────────────────────────
 
 # Create a release with an explicit version: just release 0.2.0
 release VERSION:
     #!/usr/bin/env bash
     set -euo pipefail
+
+    # Preflight checks
+    command -v git-cliff >/dev/null 2>&1 || { echo "error: git-cliff not found — cargo install git-cliff"; exit 1; }
+    command -v gh >/dev/null 2>&1 || { echo "error: gh CLI not found — https://cli.github.com"; exit 1; }
+    gh auth status >/dev/null 2>&1 || { echo "error: gh not authenticated — run: gh auth login"; exit 1; }
+
+    TAG="v{{VERSION}}"
+    echo "Releasing $TAG..."
+
+    # Run CI checks
     just ci
+
     # Update version in Cargo.toml
     sed -i.bak 's/^version = ".*"/version = "{{VERSION}}"/' Cargo.toml && rm Cargo.toml.bak
     cargo check
+
     # Generate changelog
     touch CHANGELOG.md
-    git cliff --tag "v{{VERSION}}" --unreleased --prepend CHANGELOG.md
+    git cliff --tag "$TAG" --unreleased --prepend CHANGELOG.md
+
+    # Generate release notes (just the latest version, for gh release)
+    git cliff --tag "$TAG" --unreleased > RELEASE_NOTES.md
+
     # Commit, tag, push (Cargo.lock may be gitignored for binaries)
     git add Cargo.toml CHANGELOG.md
     git add Cargo.lock 2>/dev/null || true
-    git commit -m "chore(release): v{{VERSION}}"
-    git tag "v{{VERSION}}"
+    git commit -m "chore(release): $TAG"
+    git tag "$TAG"
     git push --follow-tags
+
+    # Create GitHub release (binaries are built by the release workflow)
+    gh release create "$TAG" \
+        --title "$TAG" \
+        --notes-file RELEASE_NOTES.md
+
+    rm -f RELEASE_NOTES.md
+    echo "✓ Released $TAG — GitHub Actions will build and attach binaries"
 
 # Auto-detect next version from conventional commits and release
 release-auto:
