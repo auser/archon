@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.3.4] - 2026-03-09
+
+### Bug Fixes
+
+- Correct GitHub API version parsing in update command
+
 ## [0.3.3] - 2026-03-09
 
 ## [0.3.2] - 2026-03-09
